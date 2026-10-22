@@ -31,6 +31,9 @@ public class AuthService {
             throw new ServiceException("Invalid username or password.");
         }
         if (!User.STATUS_ACTIVE.equalsIgnoreCase(u.getStatus())) {
+            if (User.STATUS_PENDING.equalsIgnoreCase(u.getStatus())) {
+                throw new ServiceException("This account is still PENDING. Please wait for the Owner's approval.");
+            }
             throw new ServiceException("This account is inactive. Please contact the Owner.");
         }
         if (!PasswordUtil.isHashed(u.getPassword())) { // transparently upgrade legacy plain-text passwords
@@ -46,20 +49,40 @@ public class AuthService {
         logService.log(u.getUserId(), "USER_LOGOUT", u.getName() + " logged out.");
     }
 
+    /** True when no accounts exist yet (first run — next registration becomes Owner). */
+    public boolean isFirstUser() {
+        return userDAO.findAll().isEmpty();
+    }
+
     // ----------------------------------------------------------- registration
 
     /**
-     * Public self-registration (Main Entry Menu -> Sign Up). No role choice:
-     * the account is created Undefined + Inactive and cannot log in until the
-     * Owner assigns a role and reactivates it. Exception: the very first account
+     * Public self-registration (Main Entry Menu -> Sign Up) without a role choice:
+     * the account is created Undefined + Pending and cannot log in until the
+     * Owner assigns a role and activates it. Exception: the very first account
      * in an empty database becomes the active Owner (bootstrap, otherwise no
      * Owner could ever exist to approve anyone).
      */
     public User register(String name, String username, String password) {
         boolean firstUser = userDAO.findAll().isEmpty();
         String role = firstUser ? User.ROLE_OWNER : User.ROLE_UNDEFINED;
-        String status = firstUser ? User.STATUS_ACTIVE : User.STATUS_INACTIVE;
+        String status = firstUser ? User.STATUS_ACTIVE : User.STATUS_PENDING;
         return createUser(null, name, username, password, role, status);
+    }
+
+    /**
+     * Public self-registration WITH role selection (all roles in {@link User#ROLES}
+     * are pickable). The account is stored with the chosen role and a Pending
+     * status and cannot log in until the Owner activates it. Exception: the very
+     * first account in an empty database always becomes the active Owner.
+     */
+    public User register(String name, String username, String password, String role) {
+        boolean firstUser = userDAO.findAll().isEmpty();
+        if (firstUser) {
+            return createUser(null, name, username, password, User.ROLE_OWNER, User.STATUS_ACTIVE);
+        }
+        validateRole(role);
+        return createUser(null, name, username, password, role.trim(), User.STATUS_PENDING);
     }
 
     /** Owner-created staff account. */
@@ -132,6 +155,33 @@ public class AuthService {
         });
     }
 
+    /**
+     * Permanent removal. Accounts with recorded sales can never be deleted
+     * (financial history must stay intact) — deactivate those instead. The
+     * account's own activity-trail rows are purged in the same transaction so
+     * foreign keys stay satisfied; the deletion itself is logged under the
+     * Owner's id.
+     */
+    public void deleteUser(User actor, int userId) {
+        AccessControl.require(actor, User.ROLE_OWNER);
+        User target = find(userId);
+        if (target.getUserId() == actor.getUserId()) {
+            throw new ServiceException("You cannot delete your own account.");
+        }
+        if (User.ROLE_OWNER.equals(target.getRole()) && countOwners() <= 1) {
+            throw new ServiceException("You cannot delete the last remaining Owner account.");
+        }
+        if (userDAO.hasSales(userId)) {
+            throw new ServiceException("Account #" + userId + " has recorded sales and cannot be deleted. Deactivate it instead.");
+        }
+        Tx.run(c -> {
+            logService.purgeUser(c, userId);
+            userDAO.delete(c, userId);
+            logService.log(c, actor.getUserId(), "USER_DELETE",
+                    "Deleted account #" + userId + " (" + target.getUsername() + ", " + target.getRole() + ").");
+        });
+    }
+
     public void resetPassword(User actor, int userId, String newPassword) {
         AccessControl.require(actor, User.ROLE_OWNER);
         find(userId);
@@ -147,6 +197,10 @@ public class AuthService {
 
     private User find(int userId) {
         return userDAO.findById(userId).orElseThrow(() -> new ServiceException("User #" + userId + " not found."));
+    }
+
+    private long countOwners() {
+        return userDAO.findAll().stream().filter(u -> User.ROLE_OWNER.equals(u.getRole())).count();
     }
 
     private static String required(String v, String field) {

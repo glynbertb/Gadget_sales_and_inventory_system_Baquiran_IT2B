@@ -4,6 +4,8 @@ import com.app.dao.ActivityLogDAO;
 import com.app.dao.ActivityLogDAOImpl;
 import com.app.dao.CategoryDAO;
 import com.app.dao.CategoryDAOImpl;
+import com.app.dao.DatabaseConnection;
+import com.app.dao.DatabaseInitializer;
 import com.app.dao.ProductDAO;
 import com.app.dao.ProductDAOImpl;
 import com.app.dao.SaleDAO;
@@ -15,34 +17,37 @@ import com.app.service.AuthService;
 import com.app.service.ProductService;
 import com.app.service.ReportService;
 import com.app.service.SaleService;
+import com.app.ui.Authentication;
 import com.app.util.Ansi;
 import com.app.util.DataAccessException;
-import com.app.util.DatabaseConfig;
-import com.app.util.SchemaInitializer;
-import com.app.view.AuthMenu;
-import com.app.view.CashierMenu;
-import com.app.view.InventoryMenu;
-import com.app.view.OwnerMenu;
-import com.app.view.SupervisorMenu;
+import com.app.util.InputUtil;
+import com.app.ui.CashierMenu;
+import com.app.ui.InventoryMenu;
+import com.app.ui.OwnerMenu;
+import com.app.ui.SupervisorMenu;
 import java.util.NoSuchElementException;
 
-/** Composition root: wires DAOs -> services -> menus and starts the CLI. */
+/**
+ * Single-pathway startup entry point.
+ *
+ * <p>Execution flow: initialize Database -> instantiate DAOs &amp; utilities
+ * -> delegate execution to {@code Authentication.start()}. All login,
+ * registration and role-routing logic lives in {@code Authentication};
+ * this class only wires dependencies.
+ */
 public final class Main {
 
     private Main() { }
 
     public static void main(String[] args) {
         try {
+            // 1. Initialize database (creates all required tables when missing).
+            DatabaseInitializer.initialize();
 
-            System.out.println(Ansi.dim("  Database : ") + Ansi.color(DatabaseConfig.getDatabasePath().toString(), Ansi.CYAN));
-            if (!DatabaseConfig.databaseFileExists()) {
-                System.out.println(Ansi.color("  ⚠  That file does not exist yet — a NEW empty database will be created.", Ansi.YELLOW));
-                System.out.println(Ansi.dim("     If you expected your existing Gadget.db, run from its folder or use -Dgadget.db=<full path>."));
-            } else {
-                System.out.println(Ansi.color("  ✓ Database ready.", Ansi.GREEN));
-            }
-            SchemaInitializer.ensureSchema(); // no-op when the tables already exist
+            System.out.println(Ansi.dim("  Database : ") + Ansi.color(DatabaseConnection.getDatabasePath().toString(), Ansi.CYAN));
+            System.out.println(Ansi.color("  ✓ Database ready.", Ansi.GREEN));
 
+            // 2. Instantiate DAOs (single shared instances) & utilities.
             UserDAO userDAO = new UserDAOImpl();
             CategoryDAO categoryDAO = new CategoryDAOImpl();
             ProductDAO productDAO = new ProductDAOImpl();
@@ -55,12 +60,14 @@ public final class Main {
             SaleService saleService = new SaleService(saleDAO, productDAO, logService);
             ReportService reportService = new ReportService(saleDAO, productDAO, logService);
 
-            new AuthMenu(authService,
+            // 3. Delegate execution to Authentication (single shared UserDAO + Scanner across all menus).
+            new Authentication(authService,
+                    InputUtil.sharedScanner(),
                     new OwnerMenu(authService, productService, saleService, reportService, logService),
                     new CashierMenu(authService, productService, saleService),
                     new InventoryMenu(authService, productService),
                     new SupervisorMenu(authService, productService, saleService, reportService, logService)
-            ).run();
+            ).start();
 
             System.out.println(Ansi.dim("\n  ── Session ended. Database connections closed. ──"));
         } catch (DataAccessException e) {
@@ -69,12 +76,5 @@ public final class Main {
         } catch (NoSuchElementException e) { // stdin closed (Ctrl+D / piped input ended)
             System.out.println(Ansi.dim("\n  Input closed. Exiting."));
         }
-    }
-
-    private static String center(String s, int w) {
-        int len = Ansi.strip(s).length();
-        if (len >= w) return s;
-        int pad = (w - len) / 2;
-        return " ".repeat(pad) + s + " ".repeat(w - len - pad);
     }
 }

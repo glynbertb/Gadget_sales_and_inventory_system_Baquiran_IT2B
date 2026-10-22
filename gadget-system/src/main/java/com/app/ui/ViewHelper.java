@@ -1,4 +1,4 @@
-package com.app.view;
+package com.app.ui;
 
 import com.app.model.ActivityLog;
 import com.app.model.Category;

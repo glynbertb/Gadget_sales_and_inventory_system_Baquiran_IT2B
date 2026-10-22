@@ -12,6 +12,8 @@ public class User {
 
     public static final String STATUS_ACTIVE = "Active";
     public static final String STATUS_INACTIVE = "Inactive";
+    /** Status of a self-registered account waiting for Owner approval. Cannot log in until activated. */
+    public static final String STATUS_PENDING = "Pending";
 
     private int userId;
     private String name;

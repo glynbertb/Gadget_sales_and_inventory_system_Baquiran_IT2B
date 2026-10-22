@@ -13,4 +13,7 @@ public interface UserDAO {
     void update(Connection c, User user);                 // name + role
     void updateStatus(Connection c, int userId, String status);
     void updatePassword(Connection c, int userId, String passwordHash);
+    /** True when the account owns recorded sales, which must never be orphaned. */
+    boolean hasSales(int userId);
+    void delete(Connection c, int userId);
 }

@@ -1,4 +1,4 @@
-package com.app.view;
+package com.app.ui;
 
 import com.app.model.Category;
 import com.app.model.Product;
@@ -75,10 +75,11 @@ public class OwnerMenu {
             printMini(1, "List users", 2, "Create account", w);
             printMini(3, "Edit name/role", 4, "Reset password", w);
             printMini(5, "Deactivate", 6, "Reactivate", w);
+            printSingle(7, "Delete account", w);
             System.out.println(Ansi.color("├" + "─".repeat(w) + "┤", Ansi.MUTED));
             printSingle(0, "Back", w);
             System.out.println(Ansi.color("└" + "─".repeat(w) + "┘", Ansi.MUTED));
-            switch (InputUtil.readInt("Select option: ", 0, 6)) {
+            switch (InputUtil.readInt("Select option: ", 0, 7)) {
                 case 1 -> ViewHelper.safely(() -> ViewHelper.printUsers(auth.listUsers(owner)));
                 case 2 -> ViewHelper.safely(() -> {
                     String name = InputUtil.readRequired("Full name: ");
@@ -115,6 +116,14 @@ public class OwnerMenu {
                     int id = InputUtil.readInt("User ID to reactivate: ", 1, Integer.MAX_VALUE);
                     auth.setUserStatus(owner, id, true);
                     ViewHelper.success("Account reactivated.");
+                });
+                case 7 -> ViewHelper.safely(() -> {
+                    ViewHelper.printUsers(auth.listUsers(owner));
+                    int id = InputUtil.readInt("User ID to delete: ", 1, Integer.MAX_VALUE);
+                    if (InputUtil.confirm("Permanently delete account #" + id + "? This cannot be undone.")) {
+                        auth.deleteUser(owner, id);
+                        ViewHelper.success("Account deleted.");
+                    } else System.out.println(Ansi.muted("  Cancelled."));
                 });
                 case 0 -> { return; }
                 default -> { }

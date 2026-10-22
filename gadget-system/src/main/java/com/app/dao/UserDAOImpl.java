@@ -59,4 +59,13 @@ public class UserDAOImpl implements UserDAO {
     @Override public void updatePassword(Connection c, int userId, String hash) {
         JdbcHelper.update(c, "UPDATE users SET password = ? WHERE user_id = ?", ps -> { ps.setString(1, hash); ps.setInt(2, userId); });
     }
+
+    @Override public boolean hasSales(int userId) {
+        return JdbcHelper.queryOne("SELECT COUNT(*) FROM sales WHERE user_id = ?",
+                ps -> ps.setInt(1, userId), rs -> rs.getInt(1)).orElse(0) > 0;
+    }
+
+    @Override public void delete(Connection c, int userId) {
+        JdbcHelper.update(c, "DELETE FROM users WHERE user_id = ?", ps -> ps.setInt(1, userId));
+    }
 }

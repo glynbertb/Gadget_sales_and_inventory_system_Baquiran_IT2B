@@ -10,6 +10,9 @@ public final class InputUtil {
 
     private InputUtil() { }
 
+    /** The single shared Scanner for console input; pass this instance around instead of creating new ones. */
+    public static Scanner sharedScanner() { return SC; }
+
     private static String styledPrompt(String prompt) {
         // Keep prompt cyan and add arrow
         return Ansi.color("  ➤ ", Ansi.CYAN) + Ansi.color(prompt, Ansi.BRIGHT_WHITE);

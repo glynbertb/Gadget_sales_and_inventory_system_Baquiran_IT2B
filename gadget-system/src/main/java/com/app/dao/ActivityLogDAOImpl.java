@@ -15,6 +15,10 @@ public class ActivityLogDAOImpl implements ActivityLogDAO {
         });
     }
 
+    @Override public void deleteByUser(Connection c, int userId) {
+        JdbcHelper.update(c, "DELETE FROM activity_logs WHERE user_id = ?", ps -> ps.setInt(1, userId));
+    }
+
     @Override public List<ActivityLog> findRecent(int limit) {
         return JdbcHelper.query(
                 "SELECT l.log_id, l.user_id, u.name AS user_name, l.action, l.description, l.date_time " +

@@ -34,6 +34,14 @@ public class ActivityLogService {
         dao.insert(c, l);
     }
 
+    /**
+     * Removes the user's own trail rows inside the caller's transaction.
+     * Called only after the caller enforced its authorization rules.
+     */
+    public void purgeUser(Connection c, int userId) {
+        dao.deleteByUser(c, userId);
+    }
+
     public List<ActivityLog> recent(User actor, int limit) {
         AccessControl.require(actor, User.ROLE_OWNER, User.ROLE_SUPERVISOR);
         return dao.findRecent(limit);
