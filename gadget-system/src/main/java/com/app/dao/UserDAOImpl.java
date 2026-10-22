@@ -68,4 +68,17 @@ public class UserDAOImpl implements UserDAO {
     @Override public void delete(Connection c, int userId) {
         JdbcHelper.update(c, "DELETE FROM users WHERE user_id = ?", ps -> ps.setInt(1, userId));
     }
+
+    @Override public List<User> getAllUsers() {
+        return findAll();
+    }
+
+    @Override public List<User> getPendingUsers() {
+        return JdbcHelper.query(SELECT + " WHERE UPPER(status) = 'PENDING' ORDER BY user_id", null, UserDAOImpl::map);
+    }
+
+    @Override public void approveUser(Connection c, int userId) {
+        JdbcHelper.update(c, "UPDATE users SET status = ? WHERE user_id = ?",
+                ps -> { ps.setString(1, User.STATUS_APPROVED); ps.setInt(2, userId); });
+    }
 }

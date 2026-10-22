@@ -7,7 +7,7 @@ import com.app.service.AuthService;
 import com.app.service.ProductService;
 import com.app.service.ReportService;
 import com.app.service.SaleService;
-import com.app.util.Ansi;
+import com.app.util.ConsoleStyle;
 import com.app.util.InputUtil;
 
 /** Store Supervisor console: voids, returns, exchanges, stock/register audits, operational reports. */
@@ -36,7 +36,7 @@ public class SupervisorMenu {
                 case 6 -> ViewHelper.safely(() -> ViewHelper.registerAuditFlow(reports, user));
                 case 7 -> ViewHelper.safely(() -> ViewHelper.summaryFlow(reports, user, false));
                 case 8 -> ViewHelper.safely(() -> ViewHelper.logsFlow(logs, user));
-                case 0 -> { auth.logout(user); System.out.println(Ansi.color("\n  Logged out. Supervisor duties done — goodbye, " + user.getName() + "!", Ansi.MUTED)); return; }
+                case 0 -> { auth.logout(user); System.out.println(ConsoleStyle.color("\n  Logged out. Supervisor duties done — goodbye, " + user.getName() + "!", ConsoleStyle.MUTED)); return; }
                 default -> { }
             }
         }
@@ -45,7 +45,7 @@ public class SupervisorMenu {
     private void printMenu(User user) {
         ViewHelper.header("STORE SUPERVISOR  •  " + user.getName());
         int w = 64;
-        System.out.println(Ansi.color("┌" + "─".repeat(w) + "┐", Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("┌" + "─".repeat(w) + "┐", ConsoleStyle.MUTED));
         printOpt(1, "View transaction log", w);
         printOpt(2, "Void / cancel a sale", w);
         printOpt(3, "Return item(s) to stock", w);
@@ -54,15 +54,15 @@ public class SupervisorMenu {
         printOpt(6, "Perform register audit", w);
         printOpt(7, "Operational summary report", w);
         printOpt(8, "System activity logs", w);
-        System.out.println(Ansi.color("├" + "─".repeat(w) + "┤", Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("├" + "─".repeat(w) + "┤", ConsoleStyle.MUTED));
         printOpt(0, "Logout", w);
-        System.out.println(Ansi.color("└" + "─".repeat(w) + "┘", Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("└" + "─".repeat(w) + "┘", ConsoleStyle.MUTED));
     }
 
     private void printOpt(int n, String label, int w) {
-        String line = String.format("  [%s] %s", Ansi.boldColor(String.valueOf(n), Ansi.CYAN), label);
-        String stripped = Ansi.strip(line);
-        System.out.println(Ansi.color("│", Ansi.MUTED) + line + " ".repeat(Math.max(0, w - stripped.length())) + Ansi.color("│", Ansi.MUTED));
+        String line = String.format("  [%s] %s", ConsoleStyle.boldColor(String.valueOf(n), ConsoleStyle.CYAN), label);
+        String stripped = ConsoleStyle.strip(line);
+        System.out.println(ConsoleStyle.color("│", ConsoleStyle.MUTED) + line + " ".repeat(Math.max(0, w - stripped.length())) + ConsoleStyle.color("│", ConsoleStyle.MUTED));
     }
 
     private void stockAudit(User user) {
@@ -71,15 +71,15 @@ public class SupervisorMenu {
             int id = InputUtil.readInt("\n  Gadget ID to audit (0 = finish): ", 0, Integer.MAX_VALUE);
             if (id == 0) return;
             Product p = products.getProduct(id);
-            System.out.println(Ansi.color("\n  ── Auditing: ", Ansi.MUTED) + Ansi.bold(p.getGadgetName()) + Ansi.muted("  (System: " + p.getStockQuantity() + ")"));
+            System.out.println(ConsoleStyle.color("\n  ── Auditing: ", ConsoleStyle.MUTED) + ConsoleStyle.bold(p.getGadgetName()) + ConsoleStyle.muted("  (System: " + p.getStockQuantity() + ")"));
             int counted = InputUtil.readInt("  Physical count: ", 0, 1_000_000);
             int variance = counted - p.getStockQuantity();
             boolean adjust = false;
             if (variance == 0) {
-                System.out.println(Ansi.color("  ✓ No discrepancy. Stock matches.", Ansi.GREEN));
+                System.out.println(ConsoleStyle.color("  ✓ No discrepancy. Stock matches.", ConsoleStyle.GREEN));
             } else {
                 String delta = (variance > 0 ? "+" : "") + variance + " unit(s)";
-                System.out.println(Ansi.color("  ⚠ Discrepancy detected: ", Ansi.YELLOW) + Ansi.bold(delta));
+                System.out.println(ConsoleStyle.color("  ⚠ Discrepancy detected: ", ConsoleStyle.YELLOW) + ConsoleStyle.bold(delta));
                 adjust = InputUtil.confirm("  Adjust system stock to the counted quantity?");
             }
             products.auditStock(user, id, counted, adjust);

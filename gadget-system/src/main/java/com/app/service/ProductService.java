@@ -6,7 +6,7 @@ import com.app.model.Category;
 import com.app.model.Product;
 import com.app.model.User;
 import com.app.util.FormatUtil;
-import com.app.util.Tx;
+import com.app.util.Transaction;
 import java.util.Arrays;
 import java.util.List;
 
@@ -34,7 +34,7 @@ public class ProductService {
         String n = required(name, "Category name");
         if (categoryDAO.existsByName(n)) throw new ServiceException("Category '" + n + "' already exists.");
         Category cat = new Category(0, n, blankToNull(description));
-        int id = Tx.execute(c -> {
+        int id = Transaction.execute(c -> {
             int newId = categoryDAO.insert(c, cat);
             logService.log(c, actor.getUserId(), "CATEGORY_ADD", "Added category #" + newId + " '" + n + "'.");
             return newId;
@@ -52,7 +52,7 @@ public class ProductService {
         }
         cat.setCategoryName(n);
         cat.setDescription(blankToNull(description));
-        Tx.run(c -> {
+        Transaction.run(c -> {
             categoryDAO.update(c, cat);
             logService.log(c, actor.getUserId(), "CATEGORY_UPDATE", "Updated category #" + id + " -> '" + n + "'.");
         });
@@ -63,7 +63,7 @@ public class ProductService {
         AccessControl.require(actor, User.ROLE_OWNER);
         Category cat = categoryDAO.findById(id).orElseThrow(() -> new ServiceException("Category #" + id + " not found."));
         if (categoryDAO.isInUse(id)) throw new ServiceException("Category is in use by existing gadgets and cannot be removed.");
-        Tx.run(c -> {
+        Transaction.run(c -> {
             categoryDAO.delete(c, id);
             logService.log(c, actor.getUserId(), "CATEGORY_DELETE", "Removed category #" + id + " '" + cat.getCategoryName() + "'.");
         });
@@ -98,7 +98,7 @@ public class ProductService {
         p.setPrice(FormatUtil.round2(price));
         p.setStockQuantity(quantity);
         p.setStatus(quantity > 0 ? Product.STATUS_AVAILABLE : Product.STATUS_OUT_OF_STOCK);
-        int id = Tx.execute(c -> {
+        int id = Transaction.execute(c -> {
             int newId = productDAO.insert(c, p);
             logService.log(c, actor.getUserId(), "PRODUCT_ADD",
                     "Added gadget #" + newId + " '" + n + "' (qty " + quantity + ", price " + FormatUtil.money(p.getPrice()) + ").");
@@ -118,7 +118,7 @@ public class ProductService {
         p.setGadgetName(n);
         p.setCategoryId(categoryId);
         p.setPrice(FormatUtil.round2(price));
-        Tx.run(c -> {
+        Transaction.run(c -> {
             productDAO.updateInfo(c, p);
             logService.log(c, actor.getUserId(), "PRODUCT_UPDATE", "Updated gadget #" + id + " '" + n + "' (price "
                     + FormatUtil.money(oldPrice) + " -> " + FormatUtil.money(p.getPrice()) + ").");
@@ -135,7 +135,7 @@ public class ProductService {
             // Receiving for a discontinued item automatically re-activates it (stock 0 -> >0 must be Available)
             // If you truly want it discontinued, don't add stock.
         }
-        Tx.run(c -> {
+        Transaction.run(c -> {
             productDAO.increaseStock(c, id, quantityToAdd);
             logService.log(c, actor.getUserId(), "STOCK_RECEIVE",
                     "Received " + quantityToAdd + " unit(s) of #" + id + " '" + p.getGadgetName() + "' (was " + p.getStockQuantity() + ").");
@@ -161,7 +161,7 @@ public class ProductService {
         // Rule: Out of Stock and Discontinued must have stock 0 -> zero the stock automatically
         if (Product.STATUS_OUT_OF_STOCK.equals(newStatus) || Product.STATUS_DISCONTINUED.equals(newStatus)) {
             if (p.getStockQuantity() != 0 || !newStatus.equals(p.getStatus())) {
-                Tx.run(c -> {
+                Transaction.run(c -> {
                     productDAO.updateStock(c, id, 0, newStatus);
                     logService.log(c, actor.getUserId(), "PRODUCT_STATUS",
                             "Gadget #" + id + " '" + p.getGadgetName() + "' status " + p.getStatus() + " -> " + newStatus + " (stock zeroed).");
@@ -169,7 +169,7 @@ public class ProductService {
                 return;
             }
         }
-        Tx.run(c -> {
+        Transaction.run(c -> {
             productDAO.updateStatus(c, id, newStatus);
             logService.log(c, actor.getUserId(), "PRODUCT_STATUS",
                     "Gadget #" + id + " '" + p.getGadgetName() + "' status " + p.getStatus() + " -> " + newStatus + ".");
@@ -209,7 +209,7 @@ public class ProductService {
             status = Product.STATUS_DISCONTINUED.equals(p.getStatus()) ? Product.STATUS_DISCONTINUED : Product.STATUS_OUT_OF_STOCK;
         }
         String finalStatus = status;
-        Tx.run(c -> {
+        Transaction.run(c -> {
             productDAO.updateStock(c, p.getGadgetId(), newQuantity, finalStatus);
             logService.log(c, actor.getUserId(), action, description);
         });

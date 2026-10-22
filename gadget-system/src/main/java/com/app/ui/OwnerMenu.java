@@ -8,8 +8,9 @@ import com.app.service.AuthService;
 import com.app.service.ProductService;
 import com.app.service.ReportService;
 import com.app.service.SaleService;
-import com.app.util.Ansi;
+import com.app.util.ConsoleStyle;
 import com.app.util.InputUtil;
+import java.util.List;
 
 /** Owner / Admin console. */
 public class OwnerMenu {
@@ -36,7 +37,7 @@ public class OwnerMenu {
                 case 4 -> ViewHelper.safely(() -> ViewHelper.summaryFlow(reports, user, true));
                 case 5 -> salesMenu(user);
                 case 6 -> ViewHelper.safely(() -> ViewHelper.logsFlow(logs, user));
-                case 0 -> { auth.logout(user); System.out.println(Ansi.color("\n  Logged out. See you next time, " + user.getName() + "!", Ansi.MUTED)); return; }
+                case 0 -> { auth.logout(user); System.out.println(ConsoleStyle.color("\n  Logged out. See you next time, " + user.getName() + "!", ConsoleStyle.MUTED)); return; }
                 default -> { }
             }
         }
@@ -45,24 +46,24 @@ public class OwnerMenu {
     private void printMenu(User user) {
         ViewHelper.header("ADMIN  •  " + user.getName() + "  (" + user.getRole() + ")");
         int w = 64;
-        System.out.println(Ansi.color("┌" + "─".repeat(w) + "┐", Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("┌" + "─".repeat(w) + "┐", ConsoleStyle.MUTED));
         printOpt(1, "User Account Management", "", w);
         printOpt(2, "Category Management", "", w);
         printOpt(3, "Gadget Management", "", w);
         printOpt(4, "Summary Report",  "", w);
         printOpt(5, "Sales History / Void Sale", "", w);
         printOpt(6, "System Activity Logs", "", w);
-        System.out.println(Ansi.color("├" + "─".repeat(w) + "┤", Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("├" + "─".repeat(w) + "┤", ConsoleStyle.MUTED));
         printOpt(0, "Logout", "", w);
-        System.out.println(Ansi.color("└" + "─".repeat(w) + "┘", Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("└" + "─".repeat(w) + "┘", ConsoleStyle.MUTED));
     }
 
     private void printOpt(int n, String label, String desc, int w) {
-        String left = String.format("  [%s] %-26s", Ansi.boldColor(String.valueOf(n), Ansi.CYAN), Ansi.bold(label));
-        String line = left + Ansi.dim(desc);
-        String stripped = Ansi.strip(line);
+        String left = String.format("  [%s] %-26s", ConsoleStyle.boldColor(String.valueOf(n), ConsoleStyle.CYAN), ConsoleStyle.bold(label));
+        String line = left + ConsoleStyle.dim(desc);
+        String stripped = ConsoleStyle.strip(line);
         int pad = w - stripped.length();
-        System.out.println(Ansi.color("│", Ansi.MUTED) + line + " ".repeat(Math.max(0, pad)) + Ansi.color("│", Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("│", ConsoleStyle.MUTED) + line + " ".repeat(Math.max(0, pad)) + ConsoleStyle.color("│", ConsoleStyle.MUTED));
     }
 
     // ------------------------------------------------------------------ users
@@ -71,15 +72,15 @@ public class OwnerMenu {
         while (true) {
             ViewHelper.header("USER ACCOUNT MANAGEMENT");
             int w = 64;
-            System.out.println(Ansi.color("┌" + "─".repeat(w) + "┐", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("┌" + "─".repeat(w) + "┐", ConsoleStyle.MUTED));
             printMini(1, "List users", 2, "Create account", w);
             printMini(3, "Edit name/role", 4, "Reset password", w);
             printMini(5, "Deactivate", 6, "Reactivate", w);
-            printSingle(7, "Delete account", w);
-            System.out.println(Ansi.color("├" + "─".repeat(w) + "┤", Ansi.MUTED));
+            printMini(7, "Delete account", 8, "Pending approvals", w);
+            System.out.println(ConsoleStyle.color("├" + "─".repeat(w) + "┤", ConsoleStyle.MUTED));
             printSingle(0, "Back", w);
-            System.out.println(Ansi.color("└" + "─".repeat(w) + "┘", Ansi.MUTED));
-            switch (InputUtil.readInt("Select option: ", 0, 7)) {
+            System.out.println(ConsoleStyle.color("└" + "─".repeat(w) + "┘", ConsoleStyle.MUTED));
+            switch (InputUtil.readInt("Select option: ", 0, 8)) {
                 case 1 -> ViewHelper.safely(() -> ViewHelper.printUsers(auth.listUsers(owner)));
                 case 2 -> ViewHelper.safely(() -> {
                     String name = InputUtil.readRequired("Full name: ");
@@ -109,7 +110,7 @@ public class OwnerMenu {
                     if (InputUtil.confirm("Deactivate account #" + id + "?")) {
                         auth.setUserStatus(owner, id, false);
                         ViewHelper.success("Account deactivated.");
-                    } else System.out.println(Ansi.muted("  Cancelled."));
+                    } else System.out.println(ConsoleStyle.muted("  Cancelled."));
                 });
                 case 6 -> ViewHelper.safely(() -> {
                     ViewHelper.printUsers(auth.listUsers(owner));
@@ -123,7 +124,20 @@ public class OwnerMenu {
                     if (InputUtil.confirm("Permanently delete account #" + id + "? This cannot be undone.")) {
                         auth.deleteUser(owner, id);
                         ViewHelper.success("Account deleted.");
-                    } else System.out.println(Ansi.muted("  Cancelled."));
+                    } else System.out.println(ConsoleStyle.muted("  Cancelled."));
+                });
+                case 8 -> ViewHelper.safely(() -> {
+                    List<User> pending = auth.pendingUsers(owner);
+                    ViewHelper.printUserTable(pending);
+                    if (pending.isEmpty()) return;
+                    int id = InputUtil.readInt("Target User ID (0 to cancel): ", 0, Integer.MAX_VALUE);
+                    if (id == 0) {
+                        System.out.println(ConsoleStyle.muted("  Cancelled."));
+                        return;
+                    }
+                    User approved = auth.approveUser(owner, id);
+                    ViewHelper.success("Account #" + approved.getUserId() + " (" + approved.getUsername()
+                            + ") approved. Status is now " + approved.getStatus() + ".");
                 });
                 case 0 -> { return; }
                 default -> { }
@@ -132,17 +146,17 @@ public class OwnerMenu {
     }
 
     private void printMini(int n1, String l1, int n2, String l2, int w) {
-        String a = String.format("  [%s] %-18s", Ansi.color(String.valueOf(n1), Ansi.CYAN), l1);
-        String b = String.format("  [%s] %-18s", Ansi.color(String.valueOf(n2), Ansi.CYAN), l2);
+        String a = String.format("  [%s] %-18s", ConsoleStyle.color(String.valueOf(n1), ConsoleStyle.CYAN), l1);
+        String b = String.format("  [%s] %-18s", ConsoleStyle.color(String.valueOf(n2), ConsoleStyle.CYAN), l2);
         String line = a + b;
-        String stripped = Ansi.strip(line);
+        String stripped = ConsoleStyle.strip(line);
         int pad = w - stripped.length();
-        System.out.println(Ansi.color("│", Ansi.MUTED) + line + " ".repeat(Math.max(0, pad)) + Ansi.color("│", Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("│", ConsoleStyle.MUTED) + line + " ".repeat(Math.max(0, pad)) + ConsoleStyle.color("│", ConsoleStyle.MUTED));
     }
     private void printSingle(int n, String l, int w) {
-        String line = String.format("  [%s] %s", Ansi.color(String.valueOf(n), Ansi.CYAN), l);
-        String stripped = Ansi.strip(line);
-        System.out.println(Ansi.color("│", Ansi.MUTED) + line + " ".repeat(Math.max(0, w - stripped.length())) + Ansi.color("│", Ansi.MUTED));
+        String line = String.format("  [%s] %s", ConsoleStyle.color(String.valueOf(n), ConsoleStyle.CYAN), l);
+        String stripped = ConsoleStyle.strip(line);
+        System.out.println(ConsoleStyle.color("│", ConsoleStyle.MUTED) + line + " ".repeat(Math.max(0, w - stripped.length())) + ConsoleStyle.color("│", ConsoleStyle.MUTED));
     }
 
     // ------------------------------------------------------------- categories
@@ -151,12 +165,12 @@ public class OwnerMenu {
         while (true) {
             ViewHelper.header("CATEGORY MANAGEMENT");
             int w = 64;
-            System.out.println(Ansi.color("┌" + "─".repeat(w) + "┐", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("┌" + "─".repeat(w) + "┐", ConsoleStyle.MUTED));
             printMini(1, "List", 2, "Add", w);
             printMini(3, "Edit", 4, "Remove", w);
-            System.out.println(Ansi.color("├" + "─".repeat(w) + "┤", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("├" + "─".repeat(w) + "┤", ConsoleStyle.MUTED));
             printSingle(0, "Back", w);
-            System.out.println(Ansi.color("└" + "─".repeat(w) + "┘", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("└" + "─".repeat(w) + "┘", ConsoleStyle.MUTED));
             switch (InputUtil.readInt("Select option: ", 0, 4)) {
                 case 1 -> ViewHelper.safely(() -> ViewHelper.printCategories(products.listCategories()));
                 case 2 -> ViewHelper.safely(() -> {
@@ -179,7 +193,7 @@ public class OwnerMenu {
                     if (InputUtil.confirm("Remove category #" + id + "?")) {
                         products.deleteCategory(owner, id);
                         ViewHelper.success("Category removed.");
-                    } else System.out.println(Ansi.muted("  Cancelled."));
+                    } else System.out.println(ConsoleStyle.muted("  Cancelled."));
                 });
                 case 0 -> { return; }
                 default -> { }
@@ -193,14 +207,14 @@ public class OwnerMenu {
         while (true) {
             ViewHelper.header("GADGET MANAGEMENT");
             int w = 64;
-            System.out.println(Ansi.color("┌" + "─".repeat(w) + "┐", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("┌" + "─".repeat(w) + "┐", ConsoleStyle.MUTED));
             printMini(1, "List all", 2, "Search", w);
             printMini(3, "Add gadget", 4, "Edit info/price", w);
             printMini(5, "Receive stock", 6, "Set stock", w);
             printOpt(7, "Update status", "Available / Out of Stock / Discontinued", w);
-            System.out.println(Ansi.color("├" + "─".repeat(w) + "┤", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("├" + "─".repeat(w) + "┤", ConsoleStyle.MUTED));
             printSingle(0, "Back", w);
-            System.out.println(Ansi.color("└" + "─".repeat(w) + "┘", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("└" + "─".repeat(w) + "┘", ConsoleStyle.MUTED));
             switch (InputUtil.readInt("Select option: ", 0, 7)) {
                 case 1 -> ViewHelper.safely(() -> ViewHelper.printProducts(products.listProducts()));
                 case 2 -> ViewHelper.safely(() -> ViewHelper.printProducts(products.search(InputUtil.readRequired("Keyword: "))));
@@ -246,11 +260,11 @@ public class OwnerMenu {
         while (true) {
             ViewHelper.header("SALES HISTORY");
             int w = 64;
-            System.out.println(Ansi.color("┌" + "─".repeat(w) + "┐", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("┌" + "─".repeat(w) + "┐", ConsoleStyle.MUTED));
             printMini(1, "View transactions", 2, "Void a sale", w);
-            System.out.println(Ansi.color("├" + "─".repeat(w) + "┤", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("├" + "─".repeat(w) + "┤", ConsoleStyle.MUTED));
             printSingle(0, "Back", w);
-            System.out.println(Ansi.color("└" + "─".repeat(w) + "┘", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("└" + "─".repeat(w) + "┘", ConsoleStyle.MUTED));
             switch (InputUtil.readInt("Select option: ", 0, 2)) {
                 case 1 -> ViewHelper.safely(() -> ViewHelper.viewSalesFlow(sales, owner));
                 case 2 -> ViewHelper.safely(() -> ViewHelper.voidSaleFlow(sales, owner));

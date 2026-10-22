@@ -7,7 +7,7 @@ import java.sql.SQLException;
  * Runs a unit of work inside one atomic database transaction
  * (setAutoCommit(false) -> commit, or rollback on any failure).
  */
-public final class Tx {
+public final class Transaction {
 
     @FunctionalInterface
     public interface Work<T> { T run(Connection c) throws SQLException; }
@@ -15,7 +15,7 @@ public final class Tx {
     @FunctionalInterface
     public interface VoidWork { void run(Connection c) throws SQLException; }
 
-    private Tx() { }
+    private Transaction() { }
 
     public static <T> T execute(Work<T> work) {
         Connection c = null;

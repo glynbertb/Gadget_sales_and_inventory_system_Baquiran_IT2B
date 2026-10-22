@@ -5,9 +5,9 @@ package com.app.util;
  * or when NO_COLOR env is set. Safe to use everywhere - returns plain text
  * when colors are disabled.
  */
-public final class Ansi {
+public final class ConsoleStyle {
 
-    private Ansi() {}
+    private ConsoleStyle() {}
 
     // --- escape codes ---
     public static final String RESET      = "\u001B[0m";

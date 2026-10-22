@@ -14,7 +14,7 @@ import com.app.service.ProductService;
 import com.app.service.ReportService;
 import com.app.service.SaleService;
 import com.app.service.ServiceException;
-import com.app.util.Ansi;
+import com.app.util.ConsoleStyle;
 import com.app.util.DataAccessException;
 import com.app.util.FormatUtil;
 import com.app.util.InputUtil;
@@ -38,34 +38,34 @@ final class ViewHelper {
 
     static void header(String title) {
         int w = 64;
-        String clean = Ansi.strip(title).trim();
+        String clean = ConsoleStyle.strip(title).trim();
         // Top border double
         System.out.println();
-        System.out.println(Ansi.color(DL + DH.repeat(w) + DR, Ansi.CYAN));
-        System.out.println(Ansi.color(DV, Ansi.CYAN) + Ansi.boldColor(center(clean, w), Ansi.BRIGHT_CYAN) + Ansi.color(DV, Ansi.CYAN));
-        System.out.println(Ansi.color(DLB + DH.repeat(w) + DRB, Ansi.CYAN));
+        System.out.println(ConsoleStyle.color(DL + DH.repeat(w) + DR, ConsoleStyle.CYAN));
+        System.out.println(ConsoleStyle.color(DV, ConsoleStyle.CYAN) + ConsoleStyle.boldColor(center(clean, w), ConsoleStyle.BRIGHT_CYAN) + ConsoleStyle.color(DV, ConsoleStyle.CYAN));
+        System.out.println(ConsoleStyle.color(DLB + DH.repeat(w) + DRB, ConsoleStyle.CYAN));
     }
 
     static void section(String title) {
         System.out.println();
-        System.out.println(Ansi.boldColor("  " + title, Ansi.CYAN));
-        System.out.println(Ansi.color("  " + "─".repeat(Math.min(title.length()+2, 50)), Ansi.MUTED));
+        System.out.println(ConsoleStyle.boldColor("  " + title, ConsoleStyle.CYAN));
+        System.out.println(ConsoleStyle.color("  " + "─".repeat(Math.min(title.length()+2, 50)), ConsoleStyle.MUTED));
     }
 
     static void success(String msg) {
-        System.out.println(Ansi.color("\n  ✓  " + msg, Ansi.GREEN));
+        System.out.println(ConsoleStyle.color("\n  ✓  " + msg, ConsoleStyle.GREEN));
     }
 
     static void warn(String msg) {
-        System.out.println(Ansi.color("\n  ⚠  " + msg, Ansi.YELLOW));
+        System.out.println(ConsoleStyle.color("\n  ⚠  " + msg, ConsoleStyle.YELLOW));
     }
 
     static void error(String msg) {
-        System.out.println(Ansi.color("\n  ✗  " + msg, Ansi.RED));
+        System.out.println(ConsoleStyle.color("\n  ✗  " + msg, ConsoleStyle.RED));
     }
 
     static void info(String msg) {
-        System.out.println(Ansi.color("  " + msg, Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("  " + msg, ConsoleStyle.MUTED));
     }
 
     /** Runs a UI action; business and database errors are shown instead of crashing the menu loop. */
@@ -80,12 +80,12 @@ final class ViewHelper {
     }
 
     static String chooseRole() {
-        System.out.println(Ansi.color("  ┌─ Select Role ─────────────────────", Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("  ┌─ Select Role ─────────────────────", ConsoleStyle.MUTED));
         for (int i = 0; i < User.ROLES.length; i++) {
-            String num = Ansi.color(String.format("%d", i+1), Ansi.CYAN);
-            System.out.println(Ansi.color("  │ ", Ansi.MUTED) + " [" + num + Ansi.color("] ", Ansi.MUTED) + User.ROLES[i]);
+            String num = ConsoleStyle.color(String.format("%d", i+1), ConsoleStyle.CYAN);
+            System.out.println(ConsoleStyle.color("  │ ", ConsoleStyle.MUTED) + " [" + num + ConsoleStyle.color("] ", ConsoleStyle.MUTED) + User.ROLES[i]);
         }
-        System.out.println(Ansi.color("  └─────────────────────────────────", Ansi.MUTED));
+        System.out.println(ConsoleStyle.color("  └─────────────────────────────────", ConsoleStyle.MUTED));
         return User.ROLES[InputUtil.readInt("  Select role: ", 1, User.ROLES.length) - 1];
     }
 
@@ -95,13 +95,13 @@ final class ViewHelper {
         while (true) {
             int id = InputUtil.readInt("  Category ID: ", 1, Integer.MAX_VALUE);
             if (categories.stream().anyMatch(c -> c.getCategoryId() == id)) return id;
-            System.out.println(Ansi.color("  Unknown category ID.", Ansi.YELLOW));
+            System.out.println(ConsoleStyle.color("  Unknown category ID.", ConsoleStyle.YELLOW));
         }
     }
 
     private static String padRight(String s, int w) {
         if (s == null) s = "";
-        String stripped = Ansi.strip(s);
+        String stripped = ConsoleStyle.strip(s);
         int len = stripped.length();
         if (len >= w) return s;
         return s + " ".repeat(w - len);
@@ -109,7 +109,7 @@ final class ViewHelper {
 
     private static String padLeft(String s, int w) {
         if (s == null) s = "";
-        String stripped = Ansi.strip(s);
+        String stripped = ConsoleStyle.strip(s);
         int len = stripped.length();
         if (len >= w) return s;
         return " ".repeat(w - len) + s;
@@ -117,7 +117,7 @@ final class ViewHelper {
 
     private static String center(String s, int w) {
         if (s == null) s = "";
-        int len = Ansi.strip(s).length();
+        int len = ConsoleStyle.strip(s).length();
         if (len >= w) return s;
         int pad = (w - len) / 2;
         int padR = w - len - pad;
@@ -140,6 +140,31 @@ final class ViewHelper {
                         FormatUtil.trunc(u.getName(), 22),
                         FormatUtil.trunc(u.getUsername(), 16),
                         u.getRole() == null ? "-" : FormatUtil.trunc(u.getRole(), 16),
+                        u.getStatus() == null ? "-" : u.getStatus()));
+            }
+        }
+        System.out.println(sepLine);
+        System.out.println("  " + users.size() + " user(s)");
+    }
+
+    /**
+     * Structured user table: aligned headers, borders and one row per account.
+     * Columns are ID / Username / Role / Status.
+     */
+    static void printUserTable(List<User> users) {
+        String sepLine = "+-------+-----------------+--------------+------------+";
+        System.out.println();
+        System.out.println(sepLine);
+        System.out.println(String.format("| %-5s | %-15s | %-12s | %-10s |", "ID", "Username", "Role", "Status"));
+        System.out.println(sepLine);
+        if (users.isEmpty()) {
+            System.out.println(String.format("| %-45s |", "(no users found)"));
+        } else {
+            for (User u : users) {
+                System.out.println(String.format("| %-5s | %-15s | %-12s | %-10s |",
+                        u.getUserId(),
+                        FormatUtil.trunc(u.getUsername(), 15),
+                        u.getRole() == null ? "-" : FormatUtil.trunc(u.getRole(), 12),
                         u.getStatus() == null ? "-" : u.getStatus()));
             }
         }
@@ -278,15 +303,15 @@ final class ViewHelper {
     static void printSummary(SummaryReport r) {
         int w = 64;
         System.out.println();
-        System.out.println(Ansi.color(DL + DH.repeat(w) + DR, Ansi.CYAN));
-        System.out.println(Ansi.color(DV, Ansi.CYAN) + Ansi.boldColor(center("SALES & INVENTORY SUMMARY REPORT", w), Ansi.BRIGHT_CYAN) + Ansi.color(DV, Ansi.CYAN));
-        System.out.println(Ansi.color(DV, Ansi.CYAN) + Ansi.dim(center("Generated: " + r.generatedAt(), w)) + Ansi.color(DV, Ansi.CYAN));
-        System.out.println(Ansi.color(D_T_RIGHT + DH.repeat(w) + D_T_LEFT, Ansi.CYAN));
+        System.out.println(ConsoleStyle.color(DL + DH.repeat(w) + DR, ConsoleStyle.CYAN));
+        System.out.println(ConsoleStyle.color(DV, ConsoleStyle.CYAN) + ConsoleStyle.boldColor(center("SALES & INVENTORY SUMMARY REPORT", w), ConsoleStyle.BRIGHT_CYAN) + ConsoleStyle.color(DV, ConsoleStyle.CYAN));
+        System.out.println(ConsoleStyle.color(DV, ConsoleStyle.CYAN) + ConsoleStyle.dim(center("Generated: " + r.generatedAt(), w)) + ConsoleStyle.color(DV, ConsoleStyle.CYAN));
+        System.out.println(ConsoleStyle.color(D_T_RIGHT + DH.repeat(w) + D_T_LEFT, ConsoleStyle.CYAN));
 
         // KPI lines, plain text inside the title box.
-        System.out.println(Ansi.color(DV, Ansi.CYAN) + padRight("  Total Sales   :  " + FormatUtil.money(r.totalSalesAmount()), w) + Ansi.color(DV, Ansi.CYAN));
-        System.out.println(Ansi.color(DV, Ansi.CYAN) + padRight("  Transactions  :  " + r.totalTransactions() + " completed  |  " + r.voidedTransactions() + " voided", w) + Ansi.color(DV, Ansi.CYAN));
-        System.out.println(Ansi.color(DLB + DH.repeat(w) + DRB, Ansi.CYAN));
+        System.out.println(ConsoleStyle.color(DV, ConsoleStyle.CYAN) + padRight("  Total Sales   :  " + FormatUtil.money(r.totalSalesAmount()), w) + ConsoleStyle.color(DV, ConsoleStyle.CYAN));
+        System.out.println(ConsoleStyle.color(DV, ConsoleStyle.CYAN) + padRight("  Transactions  :  " + r.totalTransactions() + " completed  |  " + r.voidedTransactions() + " voided", w) + ConsoleStyle.color(DV, ConsoleStyle.CYAN));
+        System.out.println(ConsoleStyle.color(DLB + DH.repeat(w) + DRB, ConsoleStyle.CYAN));
 
         // Top sellers: plain standalone grid. Widths live in the %-Ns and sepLine below.
         String topSep = "+------+------------------------------+------------+----------------+";
@@ -386,7 +411,7 @@ final class ViewHelper {
         List<Sale> list = sales.listSales(user);
         printSales(list);
         if (list.isEmpty()) {
-            System.out.println(Ansi.muted("  No sales to void."));
+            System.out.println(ConsoleStyle.muted("  No sales to void."));
             return;
         }
         int id = InputUtil.readInt("\n  Sale ID to void (0 to cancel): ", 0, Integer.MAX_VALUE);
@@ -399,7 +424,7 @@ final class ViewHelper {
         }
         String reason = InputUtil.readRequired("  Void reason (required): ");
         if (!InputUtil.confirm("  Void sale #" + String.format("%06d", id) + " and return its items to stock?")) {
-            System.out.println(Ansi.muted("  Cancelled."));
+            System.out.println(ConsoleStyle.muted("  Cancelled."));
             return;
         }
         sales.voidSale(user, id, reason);
@@ -410,7 +435,7 @@ final class ViewHelper {
         List<Sale> list = sales.listSales(user);
         printSales(list);
         if (list.isEmpty()) {
-            System.out.println(Ansi.muted("  No sales to return from."));
+            System.out.println(ConsoleStyle.muted("  No sales to return from."));
             return;
         }
         int id = InputUtil.readInt("\n  Sale ID to return from (0 to cancel): ", 0, Integer.MAX_VALUE);
@@ -426,7 +451,7 @@ final class ViewHelper {
         int qty = InputUtil.readInt("  Quantity to return: ", 1, Integer.MAX_VALUE);
         String reason = InputUtil.readRequired("  Return reason (required): ");
         if (!InputUtil.confirm("  Return " + qty + " unit(s) to stock?")) {
-            System.out.println(Ansi.muted("  Cancelled."));
+            System.out.println(ConsoleStyle.muted("  Cancelled."));
             return;
         }
         sales.returnItem(user, id, gadgetId, qty, reason);
@@ -437,7 +462,7 @@ final class ViewHelper {
         List<Sale> list = sales.listSales(user);
         printSales(list);
         if (list.isEmpty()) {
-            System.out.println(Ansi.muted("  No sales to exchange from."));
+            System.out.println(ConsoleStyle.muted("  No sales to exchange from."));
             return;
         }
         int id = InputUtil.readInt("\n  Sale ID to exchange from (0 to cancel): ", 0, Integer.MAX_VALUE);
@@ -457,7 +482,7 @@ final class ViewHelper {
         int newQty = InputUtil.readInt("  Replacement quantity: ", 1, Integer.MAX_VALUE);
         String reason = InputUtil.readRequired("  Exchange reason (required): ");
         if (!InputUtil.confirm("  Confirm exchange (price difference settles at the register)?")) {
-            System.out.println(Ansi.muted("  Cancelled."));
+            System.out.println(ConsoleStyle.muted("  Cancelled."));
             return;
         }
         sales.exchangeItem(user, id, oldId, oldQty, newId, newQty, reason);
@@ -468,8 +493,8 @@ final class ViewHelper {
         double counted = readNonNegativeCash("  Counted cash in drawer (₱): ");
         ReportService.RegisterAudit r = reports.registerAudit(user, counted);
         section("Register audit  •  " + r.date());
-        System.out.println("  Expected (today's Cash sales): " + Ansi.bold(FormatUtil.money(r.expectedCash())));
-        System.out.println("  Counted in drawer:              " + Ansi.bold(FormatUtil.money(r.countedCash())));
+        System.out.println("  Expected (today's Cash sales): " + ConsoleStyle.bold(FormatUtil.money(r.expectedCash())));
+        System.out.println("  Counted in drawer:              " + ConsoleStyle.bold(FormatUtil.money(r.countedCash())));
         if (r.variance() == 0) success("Register balances. No discrepancy.");
         else if (r.variance() > 0) warn("Over by " + FormatUtil.money(r.variance()) + " (more cash than sales). Recorded in the log.");
         else warn("Short by " + FormatUtil.money(-r.variance()) + " (less cash than sales). Recorded in the log.");
@@ -482,9 +507,9 @@ final class ViewHelper {
             try {
                 double v = FormatUtil.round2(Double.parseDouble(s));
                 if (v >= 0 && v < 100_000_000 && !Double.isNaN(v)) return v;
-                System.out.println(Ansi.color("    ✗ Amount cannot be negative.", Ansi.YELLOW));
+                System.out.println(ConsoleStyle.color("    ✗ Amount cannot be negative.", ConsoleStyle.YELLOW));
             } catch (NumberFormatException e) {
-                System.out.println(Ansi.color("    ✗ Invalid amount.", Ansi.YELLOW));
+                System.out.println(ConsoleStyle.color("    ✗ Invalid amount.", ConsoleStyle.YELLOW));
             }
         }
     }
@@ -494,20 +519,20 @@ final class ViewHelper {
         try {
             List<Product> low = products.lowStock();
             if (low.isEmpty()) {
-                System.out.println(Ansi.color("  ✓  All stock levels are healthy.", Ansi.GREEN));
+                System.out.println(ConsoleStyle.color("  ✓  All stock levels are healthy.", ConsoleStyle.GREEN));
             } else {
-                System.out.println(Ansi.color("  ⚠  Low-stock alert: " + low.size()
+                System.out.println(ConsoleStyle.color("  ⚠  Low-stock alert: " + low.size()
                         + " gadget(s) at or below threshold (" + ProductService.LOW_STOCK_THRESHOLD
-                        + "). See the stock list for details.", Ansi.YELLOW));
+                        + "). See the stock list for details.", ConsoleStyle.YELLOW));
             }
         } catch (ServiceException | DataAccessException e) {
-            System.out.println(Ansi.color("  (Could not check stock levels: " + e.getMessage() + ")", Ansi.MUTED));
+            System.out.println(ConsoleStyle.color("  (Could not check stock levels: " + e.getMessage() + ")", ConsoleStyle.MUTED));
         }
     }
 
     static void logsFlow(ActivityLogService logs, User user) {
         int n = InputUtil.readInt("  How many recent entries? (1-500): ", 1, 500);
-        System.out.println(Ansi.dim("  Fetching last " + n + " entries…"));
+        System.out.println(ConsoleStyle.dim("  Fetching last " + n + " entries…"));
         printLogs(logs.recent(user, n));
     }
 
@@ -517,45 +542,45 @@ final class ViewHelper {
             java.util.List<Path> csvFiles = listExistingCsvFiles();
             Path chosen;
             if (csvFiles.isEmpty()) {
-                System.out.println(Ansi.dim("  No existing CSV found — creating a new one."));
-                String name = InputUtil.readOptional(Ansi.color("  File name [sales_inventory_report.csv]: ", Ansi.CYAN));
+                System.out.println(ConsoleStyle.dim("  No existing CSV found — creating a new one."));
+                String name = InputUtil.readOptional(ConsoleStyle.color("  File name [sales_inventory_report.csv]: ", ConsoleStyle.CYAN));
                 if (name.isEmpty()) name = "sales_inventory_report.csv";
                 if (!name.toLowerCase().endsWith(".csv")) name += ".csv";
                 chosen = Path.of(name);
             } else {
                 System.out.println();
-                System.out.println(Ansi.boldColor("  Existing CSV reports (append will NOT overwrite):", Ansi.BRIGHT_WHITE));
+                System.out.println(ConsoleStyle.boldColor("  Existing CSV reports (append will NOT overwrite):", ConsoleStyle.BRIGHT_WHITE));
                 for (int i = 0; i < csvFiles.size(); i++) {
                     Path p = csvFiles.get(i);
                     String when = formatFileTime(p);
                     String size = formatFileSize(p);
                     System.out.printf("   %s %s  %s  %s%n",
-                            Ansi.color("[" + (i + 1) + "]", Ansi.CYAN),
-                            Ansi.bold(p.getFileName().toString()),
-                            Ansi.dim("— Last exported: " + when + "  (" + size + ")"),
+                            ConsoleStyle.color("[" + (i + 1) + "]", ConsoleStyle.CYAN),
+                            ConsoleStyle.bold(p.getFileName().toString()),
+                            ConsoleStyle.dim("— Last exported: " + when + "  (" + size + ")"),
                             "");
                 }
                 int createOpt = csvFiles.size() + 1;
                 System.out.printf("   %s %s%n",
-                        Ansi.color("[" + createOpt + "]", Ansi.CYAN),
-                        Ansi.bold("+ Create new file"));
+                        ConsoleStyle.color("[" + createOpt + "]", ConsoleStyle.CYAN),
+                        ConsoleStyle.bold("+ Create new file"));
                 int sel = InputUtil.readInt(
                         "  Select report to append to [1-" + createOpt + "] (0 to cancel): ", 0, createOpt);
                 if (sel == 0) {
-                    System.out.println(Ansi.dim("  Cancelled."));
+                    System.out.println(ConsoleStyle.dim("  Cancelled."));
                     return;
                 }
                 if (sel == createOpt) {
-                    String name = InputUtil.readOptional(Ansi.color("  New file name [sales_inventory_report.csv]: ", Ansi.CYAN));
+                    String name = InputUtil.readOptional(ConsoleStyle.color("  New file name [sales_inventory_report.csv]: ", ConsoleStyle.CYAN));
                     if (name.isEmpty()) name = "sales_inventory_report.csv";
                     if (!name.toLowerCase().endsWith(".csv")) name += ".csv";
                     chosen = Path.of(name);
                     if (java.nio.file.Files.exists(chosen)) {
-                        System.out.println(Ansi.color("  Note: file already exists — new data will be APPENDED below existing rows.", Ansi.YELLOW));
+                        System.out.println(ConsoleStyle.color("  Note: file already exists — new data will be APPENDED below existing rows.", ConsoleStyle.YELLOW));
                     }
                 } else {
                     chosen = csvFiles.get(sel - 1);
-                    System.out.println(Ansi.color("  Appending below existing data in: " + chosen.getFileName(), Ansi.YELLOW));
+                    System.out.println(ConsoleStyle.color("  Appending below existing data in: " + chosen.getFileName(), ConsoleStyle.YELLOW));
                 }
             }
             Path out = reports.exportCsv(user, chosen.toString());
@@ -568,7 +593,7 @@ final class ViewHelper {
             } else {
                 success("Report exported to: " + out.toAbsolutePath() + "  (created: " + whenNow + ")");
             }
-            System.out.println(Ansi.dim("  Old data preserved — new report added below."));
+            System.out.println(ConsoleStyle.dim("  Old data preserved — new report added below."));
         }
     }
 

@@ -12,6 +12,8 @@ public class User {
 
     public static final String STATUS_ACTIVE = "Active";
     public static final String STATUS_INACTIVE = "Inactive";
+    /** A pending registration the Owner has approved. Logs in exactly like an active account. */
+    public static final String STATUS_APPROVED = "Approved";
     /** Status of a self-registered account waiting for Owner approval. Cannot log in until activated. */
     public static final String STATUS_PENDING = "Pending";
 

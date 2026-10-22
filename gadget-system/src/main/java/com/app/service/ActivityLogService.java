@@ -4,7 +4,7 @@ import com.app.dao.ActivityLogDAO;
 import com.app.model.ActivityLog;
 import com.app.model.User;
 import com.app.util.FormatUtil;
-import com.app.util.Tx;
+import com.app.util.Transaction;
 import java.sql.Connection;
 import java.util.List;
 
@@ -18,7 +18,7 @@ public class ActivityLogService {
     /** Standalone log entry (own transaction). A logging failure never breaks the user's workflow. */
     public void log(int userId, String action, String description) {
         try {
-            Tx.run(c -> log(c, userId, action, description));
+            Transaction.run(c -> log(c, userId, action, description));
         } catch (RuntimeException e) {
             System.err.println("[WARN] Could not write activity log (" + action + "): " + e.getMessage());
         }

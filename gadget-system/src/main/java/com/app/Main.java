@@ -18,7 +18,7 @@ import com.app.service.ProductService;
 import com.app.service.ReportService;
 import com.app.service.SaleService;
 import com.app.ui.Authentication;
-import com.app.util.Ansi;
+import com.app.util.ConsoleStyle;
 import com.app.util.DataAccessException;
 import com.app.util.InputUtil;
 import com.app.ui.CashierMenu;
@@ -44,8 +44,8 @@ public final class Main {
             // 1. Initialize database (creates all required tables when missing).
             DatabaseInitializer.initialize();
 
-            System.out.println(Ansi.dim("  Database : ") + Ansi.color(DatabaseConnection.getDatabasePath().toString(), Ansi.CYAN));
-            System.out.println(Ansi.color("  ✓ Database ready.", Ansi.GREEN));
+            System.out.println(ConsoleStyle.dim("  Database : ") + ConsoleStyle.color(DatabaseConnection.getDatabasePath().toString(), ConsoleStyle.CYAN));
+            System.out.println(ConsoleStyle.color("  ✓ Database ready.", ConsoleStyle.GREEN));
 
             // 2. Instantiate DAOs (single shared instances) & utilities.
             UserDAO userDAO = new UserDAOImpl();
@@ -69,12 +69,12 @@ public final class Main {
                     new SupervisorMenu(authService, productService, saleService, reportService, logService)
             ).start();
 
-            System.out.println(Ansi.dim("\n  ── Session ended. Database connections closed. ──"));
+            System.out.println(ConsoleStyle.dim("\n  ── Session ended. Database connections closed. ──"));
         } catch (DataAccessException e) {
-            System.err.println(Ansi.color("  ✗ Fatal database error: " + e.getMessage(), Ansi.RED));
+            System.err.println(ConsoleStyle.color("  ✗ Fatal database error: " + e.getMessage(), ConsoleStyle.RED));
             System.exit(1);
         } catch (NoSuchElementException e) { // stdin closed (Ctrl+D / piped input ended)
-            System.out.println(Ansi.dim("\n  Input closed. Exiting."));
+            System.out.println(ConsoleStyle.dim("\n  Input closed. Exiting."));
         }
     }
 }

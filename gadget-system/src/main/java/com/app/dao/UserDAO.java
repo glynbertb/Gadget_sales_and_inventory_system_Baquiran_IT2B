@@ -16,4 +16,10 @@ public interface UserDAO {
     /** True when the account owns recorded sales, which must never be orphaned. */
     boolean hasSales(int userId);
     void delete(Connection c, int userId);
+    /** Every registered account, regardless of role. */
+    List<User> getAllUsers();
+    /** Every account still waiting for approval (any role). */
+    List<User> getPendingUsers();
+    /** Moves one pending account to approved. Caller must verify the account is pending first. */
+    void approveUser(Connection c, int userId);
 }

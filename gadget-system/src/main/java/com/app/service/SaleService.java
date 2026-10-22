@@ -7,7 +7,7 @@ import com.app.model.Sale;
 import com.app.model.SaleItem;
 import com.app.model.User;
 import com.app.util.FormatUtil;
-import com.app.util.Tx;
+import com.app.util.Transaction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -49,7 +49,7 @@ public class SaleService {
             lines.merge(ci.gadgetId(), ci.quantity(), Integer::sum);
         }
 
-        return Tx.execute(c -> {
+        return Transaction.execute(c -> {
             List<SaleItem> items = new ArrayList<>();
             double total = 0;
 
@@ -98,7 +98,7 @@ public class SaleService {
                     + items.size() + " line(s), total " + FormatUtil.money(sale.getTotalAmount()) + " via " + paymentMethod + ".");
 
             sale.setItems(items);
-            return sale; // 5) commit happens in Tx.execute
+            return sale; // 5) commit happens in Transaction.execute
         });
     }
 
@@ -108,7 +108,7 @@ public class SaleService {
         if (reason == null || reason.trim().isEmpty()) throw new ServiceException("A void reason is mandatory.");
         String why = reason.trim();
 
-        Tx.run(c -> {
+        Transaction.run(c -> {
             Sale sale = saleDAO.findById(c, saleId).orElseThrow(() -> new ServiceException("Sale #" + saleId + " not found."));
             if (!Sale.STATUS_COMPLETED.equals(sale.getSaleStatus())) {
                 throw new ServiceException("Sale #" + saleId + " is '" + sale.getSaleStatus() + "'; only Completed sales can be voided.");
@@ -133,7 +133,7 @@ public class SaleService {
         if (reason == null || reason.trim().isEmpty()) throw new ServiceException("A return reason is mandatory.");
         String why = reason.trim();
 
-        Tx.run(c -> {
+        Transaction.run(c -> {
             Sale sale = saleDAO.findById(c, saleId).orElseThrow(() -> new ServiceException("Sale #" + saleId + " not found."));
             if (!Sale.STATUS_COMPLETED.equals(sale.getSaleStatus())) {
                 throw new ServiceException("Sale #" + saleId + " is '" + sale.getSaleStatus() + "'; only Completed sales accept returns.");
@@ -167,7 +167,7 @@ public class SaleService {
         if (reason == null || reason.trim().isEmpty()) throw new ServiceException("An exchange reason is mandatory.");
         String why = reason.trim();
 
-        Tx.run(c -> {
+        Transaction.run(c -> {
             Sale sale = saleDAO.findById(c, saleId).orElseThrow(() -> new ServiceException("Sale #" + saleId + " not found."));
             if (!Sale.STATUS_COMPLETED.equals(sale.getSaleStatus())) {
                 throw new ServiceException("Sale #" + saleId + " is '" + sale.getSaleStatus() + "'; only Completed sales accept exchanges.");

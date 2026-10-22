@@ -3,7 +3,7 @@ package com.app.service;
 import com.app.dao.UserDAO;
 import com.app.model.User;
 import com.app.util.PasswordUtil;
-import com.app.util.Tx;
+import com.app.util.Transaction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -30,7 +30,9 @@ public class AuthService {
         if (!PasswordUtil.matches(password, u.getPassword())) {
             throw new ServiceException("Invalid username or password.");
         }
-        if (!User.STATUS_ACTIVE.equalsIgnoreCase(u.getStatus())) {
+        boolean usable = User.STATUS_ACTIVE.equalsIgnoreCase(u.getStatus())
+                || User.STATUS_APPROVED.equalsIgnoreCase(u.getStatus());
+        if (!usable) {
             if (User.STATUS_PENDING.equalsIgnoreCase(u.getStatus())) {
                 throw new ServiceException("This account is still PENDING. Please wait for the Owner's approval.");
             }
@@ -38,7 +40,7 @@ public class AuthService {
         }
         if (!PasswordUtil.isHashed(u.getPassword())) { // transparently upgrade legacy plain-text passwords
             String hash = PasswordUtil.hash(password);
-            Tx.run(c -> userDAO.updatePassword(c, u.getUserId(), hash));
+            Transaction.run(c -> userDAO.updatePassword(c, u.getUserId(), hash));
         }
         logService.log(u.getUserId(), "USER_LOGIN", u.getName() + " (" + u.getRole() + ") logged in.");
         u.setPassword(null); // never keep the credential in the session object
@@ -104,7 +106,7 @@ public class AuthService {
         if (userDAO.findByUsername(un).isPresent()) throw new ServiceException("Username '" + un + "' is already taken.");
 
         User u = new User(n, un, PasswordUtil.hash(password), role, status);
-        int id = Tx.execute(c -> {
+        int id = Transaction.execute(c -> {
             int newId = userDAO.insert(c, u);
             if (actor == null) {
                 logService.log(c, newId, "USER_REGISTER", "New account registered: " + un + " (" + role + ", " + status + ").");
@@ -122,7 +124,33 @@ public class AuthService {
 
     public List<User> listUsers(User actor) {
         AccessControl.require(actor, User.ROLE_OWNER);
-        return userDAO.findAll();
+        return userDAO.getAllUsers();
+    }
+
+    /** Every account awaiting approval, across all roles. */
+    public List<User> pendingUsers(User actor) {
+        AccessControl.require(actor, User.ROLE_OWNER);
+        return userDAO.getPendingUsers();
+    }
+
+    /**
+     * Approves one pending registration. The target id must currently sit in
+     * the pending list; anything else (unknown id, already usable account)
+     * is rejected instead of silently updated.
+     */
+    public User approveUser(User actor, int userId) {
+        AccessControl.require(actor, User.ROLE_OWNER);
+        User target = userDAO.getPendingUsers().stream()
+                .filter(u -> u.getUserId() == userId)
+                .findFirst()
+                .orElseThrow(() -> new ServiceException("Account #" + userId + " is not in the pending list."));
+        Transaction.run(c -> {
+            userDAO.approveUser(c, userId);
+            logService.log(c, actor.getUserId(), "USER_APPROVE",
+                    "Approved account #" + userId + " (" + target.getUsername() + ", " + target.getRole() + ").");
+        });
+        target.setStatus(User.STATUS_APPROVED);
+        return target;
     }
 
     public void updateUser(User actor, int userId, String name, String role) {
@@ -135,7 +163,7 @@ public class AuthService {
         }
         target.setName(n);
         target.setRole(role);
-        Tx.run(c -> {
+        Transaction.run(c -> {
             userDAO.update(c, target);
             logService.log(c, actor.getUserId(), "USER_UPDATE", "Updated account #" + userId + " -> " + n + " (" + role + ").");
         });
@@ -148,7 +176,7 @@ public class AuthService {
             throw new ServiceException("You cannot deactivate your own account.");
         }
         String status = active ? User.STATUS_ACTIVE : User.STATUS_INACTIVE;
-        Tx.run(c -> {
+        Transaction.run(c -> {
             userDAO.updateStatus(c, userId, status);
             logService.log(c, actor.getUserId(), active ? "USER_ACTIVATE" : "USER_DEACTIVATE",
                     (active ? "Reactivated" : "Deactivated") + " account #" + userId + " (" + target.getUsername() + ").");
@@ -174,7 +202,7 @@ public class AuthService {
         if (userDAO.hasSales(userId)) {
             throw new ServiceException("Account #" + userId + " has recorded sales and cannot be deleted. Deactivate it instead.");
         }
-        Tx.run(c -> {
+        Transaction.run(c -> {
             logService.purgeUser(c, userId);
             userDAO.delete(c, userId);
             logService.log(c, actor.getUserId(), "USER_DELETE",
@@ -187,7 +215,7 @@ public class AuthService {
         find(userId);
         validatePassword(newPassword);
         String hash = PasswordUtil.hash(newPassword);
-        Tx.run(c -> {
+        Transaction.run(c -> {
             userDAO.updatePassword(c, userId, hash);
             logService.log(c, actor.getUserId(), "USER_PASSWORD_RESET", "Reset password for account #" + userId + ".");
         });
