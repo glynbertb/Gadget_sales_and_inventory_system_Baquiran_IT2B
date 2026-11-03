@@ -46,7 +46,7 @@
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.app.Main</mainClass>
+                                    <mainClass>com.gadget_sale_inventory_system.Main</mainClass>
                                 </transformer>
                             </transformers>
                             <filters>

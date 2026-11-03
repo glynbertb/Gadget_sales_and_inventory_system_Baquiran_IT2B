@@ -1,0 +1,26 @@
+package com.gadget_sale_inventory_system.dao;
+
+import com.gadget_sale_inventory_system.model.User;
+import java.sql.Connection;
+import java.util.List;
+import java.util.Optional;
+
+public interface UserDAO {
+    Optional<User> findById(int userId);
+    Optional<User> findByUsername(String username);
+    List<User> findAll();
+    int insert(Connection c, User user);
+    void update(Connection c, User user);                 // name + role
+    void updateUserRoleAndStatus(Connection c, int userId, String newRole, String newStatus);
+    void updateStatus(Connection c, int userId, String status);
+    void updatePassword(Connection c, int userId, String passwordHash);
+    /** True when the account owns recorded sales, which must never be orphaned. */
+    boolean hasSales(int userId);
+    void delete(Connection c, int userId);
+    /** Every registered account, regardless of role. */
+    List<User> getAllUsers();
+    /** Every account still waiting for approval (any role). */
+    List<User> getPendingUsers();
+    /** Moves one pending account to approved. Caller must verify the account is pending first. */
+    void approveUser(Connection c, int userId);
+}
