@@ -13,8 +13,8 @@ import java.util.Optional;
 public class SaleDAOImpl implements SaleDAO {
 
     private static final String SALE_SELECT =
-            "SELECT s.sale_id, s.user_id, u.name AS cashier_name, s.sale_date, s.total_amount, s.payment_method, s.sale_status " +
-            "FROM sales s LEFT JOIN users u ON u.user_id = s.user_id";
+            "SELECT s.sale_id, s.user_id, u.name AS cashier_name, s.sale_date, s.total_amount, s.payment_method, s.sale_status, s.cash_received, s.change_amount " +
+            "FROM sales s LEFT JOIN users u ON u.id = s.user_id";
 
     private static final String ITEM_SELECT =
             "SELECT si.sale_item_id, si.sale_id, si.gadget_id, p.gadget_name, si.quantity, si.unit_price, si.subtotal " +
@@ -30,6 +30,8 @@ public class SaleDAOImpl implements SaleDAO {
         s.setTotalAmount(rs.getDouble("total_amount"));
         s.setPaymentMethod(rs.getString("payment_method"));
         s.setSaleStatus(rs.getString("sale_status"));
+        s.setCashReceived(rs.getObject("cash_received") == null ? null : rs.getDouble("cash_received"));
+        s.setChangeAmount(rs.getObject("change_amount") == null ? null : rs.getDouble("change_amount"));
         return s;
     }
 
@@ -47,12 +49,16 @@ public class SaleDAOImpl implements SaleDAO {
 
     @Override public int insertSale(Connection c, Sale s) {
         return JdbcHelper.insert(c,
-                "INSERT INTO sales (user_id, sale_date, total_amount, payment_method, sale_status) VALUES (?, ?, ?, ?, ?)", ps -> {
+                "INSERT INTO sales (user_id, sale_date, total_amount, payment_method, sale_status, cash_received, change_amount) VALUES (?, ?, ?, ?, ?, ?, ?)", ps -> {
                     ps.setInt(1, s.getUserId());
                     ps.setString(2, s.getSaleDate());
                     ps.setDouble(3, s.getTotalAmount());
                     ps.setString(4, s.getPaymentMethod());
                     ps.setString(5, s.getSaleStatus());
+                    if (s.getCashReceived() == null) ps.setNull(6, java.sql.Types.REAL);
+                    else ps.setDouble(6, s.getCashReceived());
+                    if (s.getChangeAmount() == null) ps.setNull(7, java.sql.Types.REAL);
+                    else ps.setDouble(7, s.getChangeAmount());
                 });
     }
 

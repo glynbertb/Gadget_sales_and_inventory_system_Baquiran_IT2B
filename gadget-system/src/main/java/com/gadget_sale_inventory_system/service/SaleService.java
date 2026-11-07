@@ -36,11 +36,25 @@ public class SaleService {
      * Atomic checkout: sales row -> sale_items -> stock deduction (+auto 'Out of Stock') -> activity log.
      * Any failure rolls the entire transaction back, so stock and sales can never diverge.
      */
+    /** Non-cash checkout. Cash payments must supply the amount actually received. */
     public Sale checkout(User cashier, List<CartItem> cart, String paymentMethod) {
+        return checkout(cashier, cart, paymentMethod, null);
+    }
+
+    public Sale checkout(User cashier, List<CartItem> cart, String paymentMethod, Double cashReceived) {
         AccessControl.require(cashier, User.ROLE_CASHIER);
         if (cart == null || cart.isEmpty()) throw new ServiceException("The cart is empty.");
         if (paymentMethod == null || !Arrays.asList(Sale.PAYMENT_METHODS).contains(paymentMethod)) {
             throw new ServiceException("Invalid payment method.");
+        }
+
+        boolean cashPayment = "Cash".equals(paymentMethod);
+        if (cashPayment && (cashReceived == null || !Double.isFinite(cashReceived)
+                || cashReceived <= 0 || cashReceived >= 100_000_000)) {
+            throw new ServiceException("Enter a valid cash received amount greater than zero and below 100,000,000.");
+        }
+        if (!cashPayment && cashReceived != null) {
+            throw new ServiceException("Cash received applies only to Cash payments.");
         }
 
         Map<Integer, Integer> lines = new LinkedHashMap<>(); // merge duplicate gadgets
@@ -81,6 +95,15 @@ public class SaleService {
             sale.setSaleDate(FormatUtil.now());
             sale.setTotalAmount(FormatUtil.round2(total));
             sale.setPaymentMethod(paymentMethod);
+            if (cashPayment) {
+                double received = FormatUtil.round2(cashReceived);
+                if (received < sale.getTotalAmount()) {
+                    throw new ServiceException("Insufficient cash. Total is " + FormatUtil.money(sale.getTotalAmount())
+                            + "; received " + FormatUtil.money(received) + ".");
+                }
+                sale.setCashReceived(received);
+                sale.setChangeAmount(FormatUtil.round2(received - sale.getTotalAmount()));
+            }
             sale.setSaleStatus(Sale.STATUS_COMPLETED);
             sale.setSaleId(saleDAO.insertSale(c, sale));
 
@@ -94,7 +117,7 @@ public class SaleService {
             }
 
             // 4) audit trail (same transaction)
-            logService.log(c, cashier.getUserId(), "CREATE_SALE", "Sale #" + sale.getSaleId() + " completed: "
+            logService.logAction(c, cashier.getUserId(), "CREATE_SALE", "Sale #" + sale.getSaleId() + " completed: "
                     + items.size() + " line(s), total " + FormatUtil.money(sale.getTotalAmount()) + " via " + paymentMethod + ".");
 
             sale.setItems(items);
@@ -117,7 +140,7 @@ public class SaleService {
             for (SaleItem item : saleDAO.findItems(c, saleId)) {
                 productDAO.increaseStock(c, item.getGadgetId(), item.getQuantity());
             }
-            logService.log(c, actor.getUserId(), "VOID_SALE", "Sale #" + saleId + " voided. Reason: " + why);
+            logService.logAction(c, actor.getUserId(), "VOID_SALE", "Sale #" + saleId + " voided. Reason: " + why);
         });
     }
 
@@ -148,7 +171,7 @@ public class SaleService {
             if (shrinkLine(c, sale, line, quantity)) {
                 saleDAO.updateStatus(c, saleId, Sale.STATUS_RETURNED);
             }
-            logService.log(c, actor.getUserId(), "RETURN_ITEM", "Sale #" + saleId + ": returned " + quantity
+            logService.logAction(c, actor.getUserId(), "RETURN_ITEM", "Sale #" + saleId + ": returned " + quantity
                     + " x '" + line.getGadgetName() + "'. Reason: " + why);
         });
     }
@@ -203,7 +226,7 @@ public class SaleService {
             // reload the total after shrinkLine, then add the new line value
             double total = saleDAO.findById(c, saleId).orElseThrow().getTotalAmount();
             saleDAO.updateTotal(c, saleId, FormatUtil.round2(total + added.getSubtotal()));
-            logService.log(c, actor.getUserId(), "EXCHANGE_ITEM", "Sale #" + saleId + ": exchanged " + returnQuantity
+            logService.logAction(c, actor.getUserId(), "EXCHANGE_ITEM", "Sale #" + saleId + ": exchanged " + returnQuantity
                     + " x '" + oldLine.getGadgetName() + "' (" + FormatUtil.money(refund) + ") for " + newQuantity
                     + " x '" + fresh.getGadgetName() + "' (" + FormatUtil.money(added.getSubtotal()) + "). Reason: " + why);
         });

@@ -275,29 +275,58 @@ final class ViewHelper {
         // Total Row
         System.out.println(String.format("| %-23s| %5s | %10s | %12s |", "TOTAL", "", "", FormatUtil.money(s.getTotalAmount())));
         System.out.println(sepLine);
-    }
-    static void printLogs(List<ActivityLog> logs) {
-        // Plain grid: to change a column width, edit its %-Ns below AND the matching dashes in sepLine.
-        String sepLine = "+-------+---------------------+----------------+------------------+----------------------------------------+";
-        System.out.println();
-        System.out.println(sepLine);
-        System.out.println(String.format("| %-5s | %-19s | %-14s | %-16s | %-38s |", "ID", "Date/Time", "User", "Action", "Description"));
-        System.out.println(sepLine);
-        if (logs.isEmpty()) {
-            System.out.println(String.format("| %-104s |", "(no activity recorded)"));
-        } else {
-            for (ActivityLog l : logs) {
-                String user = l.getUserName() == null ? "#" + l.getUserId() : l.getUserName();
-                System.out.println(String.format("| %-5s | %-19s | %-14s | %-16s | %-38s |",
-                        l.getLogId(),
-                        FormatUtil.trunc(l.getDateTime(), 19),
-                        FormatUtil.trunc(user, 14),
-                        FormatUtil.trunc(l.getAction() == null ? "-" : l.getAction(), 16),
-                        FormatUtil.trunc(l.getDescription() == null ? "" : l.getDescription(), 38)));
+        if ("Cash".equals(s.getPaymentMethod())) {
+            if (s.getCashReceived() == null || s.getChangeAmount() == null) {
+                System.out.println("  Cash received / change: Not recorded for this historical sale.");
+            } else {
+                System.out.println("  Cash received at checkout: " + FormatUtil.money(s.getCashReceived()));
+                System.out.println("  Change given at checkout:  " + FormatUtil.money(s.getChangeAmount()));
             }
         }
-        System.out.println(sepLine);
-        System.out.println("  " + logs.size() + " log(s)");
+    }
+    static void printLogs(List<ActivityLog> logs) {
+        String format = "| %-5s | %-8s | %-18s | %-35s | %-20s |";
+        String separator = "+-------+----------+--------------------+-------------------------------------+----------------------+";
+        System.out.println();
+        System.out.println(separator);
+        System.out.printf((format) + "%n", "ID", "User ID", "Action", "Description", "Timestamp");
+        System.out.println(separator);
+        if (logs.isEmpty()) {
+            System.out.printf(format + "%n", "", "", "", "No audit logs found.", "");
+        }
+        for (ActivityLog log : logs) {
+            List<String> ids = wrapLogText(String.valueOf(log.getId()), 5);
+            List<String> users = wrapLogText(String.valueOf(log.getUserId()), 8);
+            List<String> actions = wrapLogText(log.getActionType(), 18);
+            List<String> descriptions = wrapLogText(log.getDescription(), 35);
+            List<String> times = wrapLogText(log.getTimestamp(), 20);
+            int rows = Math.max(Math.max(ids.size(), users.size()),
+                    Math.max(actions.size(), Math.max(descriptions.size(), times.size())));
+            for (int i = 0; i < rows; i++) {
+                System.out.printf(format + "%n", logCell(ids, i), logCell(users, i),
+                        logCell(actions, i), logCell(descriptions, i), logCell(times, i));
+            }
+            System.out.println(separator);
+        }
+        if (logs.isEmpty()) System.out.println(separator);
+    }
+
+    private static String logCell(List<String> lines, int index) {
+        return index < lines.size() ? lines.get(index) : "";
+    }
+
+    /** Wrap rather than truncate evidence; neutralize control characters in stored text. */
+    private static List<String> wrapLogText(String value, int width) {
+        String text = value == null ? "" : value.replaceAll("[\\p{Cc}\\p{Cf}]", " ").trim();
+        List<String> lines = new java.util.ArrayList<>();
+        while (text.length() > width) {
+            int end = text.lastIndexOf(' ', width);
+            if (end <= 0) end = width;
+            lines.add(text.substring(0, end));
+            text = text.substring(end).stripLeading();
+        }
+        lines.add(text);
+        return lines;
     }
 
     static void printSummary(SummaryReport r) {
@@ -391,6 +420,11 @@ final class ViewHelper {
         // TOTAL keeps the same columns: label under Price, amount under Subtotal.
         System.out.println(String.format("| %-16s | %-3s | %-10s | %-10s |", "", "", "TOTAL", FormatUtil.money(s.getTotalAmount())));
         System.out.println(gridSep);
+        if ("Cash".equals(s.getPaymentMethod()) && s.getCashReceived() != null && s.getChangeAmount() != null) {
+            System.out.printf("| %-32s %15s |%n", "CASH RECEIVED", FormatUtil.money(s.getCashReceived()));
+            System.out.printf("| %-32s %15s |%n", "CHANGE", FormatUtil.money(s.getChangeAmount()));
+            System.out.println(edge);
+        }
         System.out.println("| " + center("Thank you for shopping with us!", 48) + " |");
         System.out.println("| " + center("Please come again!", 48) + " |");
         System.out.println(edge);
@@ -531,9 +565,7 @@ final class ViewHelper {
     }
 
     static void logsFlow(ActivityLogService logs, User user) {
-        int n = InputUtil.readInt("  How many recent entries? (1-500): ", 1, 500);
-        System.out.println(ConsoleStyle.dim("  Fetching last " + n + " entries…"));
-        printLogs(logs.recent(user, n));
+        new AdminMenu(logs).run(user);
     }
 
     static void summaryFlow(ReportService reports, User user, boolean allowExport) {

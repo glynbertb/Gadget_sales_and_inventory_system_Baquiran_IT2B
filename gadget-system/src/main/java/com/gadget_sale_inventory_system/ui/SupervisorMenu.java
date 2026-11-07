@@ -53,7 +53,7 @@ public class SupervisorMenu {
         printOpt(5, "Perform stock audit", w);
         printOpt(6, "Perform register audit", w);
         printOpt(7, "Operational summary report", w);
-        printOpt(8, "System activity logs", w);
+        printOpt(8, "View System Audit Logs", w);
         System.out.println(ConsoleStyle.color("├" + "─".repeat(w) + "┤", ConsoleStyle.MUTED));
         printOpt(0, "Logout", w);
         System.out.println(ConsoleStyle.color("└" + "─".repeat(w) + "┘", ConsoleStyle.MUTED));

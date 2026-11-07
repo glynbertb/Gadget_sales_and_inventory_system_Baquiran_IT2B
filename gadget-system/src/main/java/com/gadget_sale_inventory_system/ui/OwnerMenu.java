@@ -52,7 +52,7 @@ public class OwnerMenu {
         printOpt(3, "Gadget Management", "", w);
         printOpt(4, "Summary Report",  "", w);
         printOpt(5, "Sales History / Void Sale", "", w);
-        printOpt(6, "System Activity Logs", "", w);
+        printOpt(6, "View System Audit Logs", "", w);
         System.out.println(ConsoleStyle.color("├" + "─".repeat(w) + "┤", ConsoleStyle.MUTED));
         printOpt(0, "Logout", "", w);
         System.out.println(ConsoleStyle.color("└" + "─".repeat(w) + "┘", ConsoleStyle.MUTED));

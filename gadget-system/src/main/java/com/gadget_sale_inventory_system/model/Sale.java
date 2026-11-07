@@ -16,6 +16,8 @@ public class Sale {
     private double totalAmount;
     private String paymentMethod;
     private String saleStatus;
+    private Double cashReceived;
+    private Double changeAmount;
     private List<SaleItem> items = new ArrayList<>();
 
     public int getSaleId() { return saleId; }
@@ -32,6 +34,10 @@ public class Sale {
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
     public String getSaleStatus() { return saleStatus; }
     public void setSaleStatus(String saleStatus) { this.saleStatus = saleStatus; }
+    public Double getCashReceived() { return cashReceived; }
+    public void setCashReceived(Double cashReceived) { this.cashReceived = cashReceived; }
+    public Double getChangeAmount() { return changeAmount; }
+    public void setChangeAmount(Double changeAmount) { this.changeAmount = changeAmount; }
     public List<SaleItem> getItems() { return items; }
     public void setItems(List<SaleItem> items) { this.items = items; }
 }

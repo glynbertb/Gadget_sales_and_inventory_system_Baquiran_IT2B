@@ -42,13 +42,13 @@ public class AuthService {
             String hash = PasswordUtil.hash(password);
             Transaction.run(c -> userDAO.updatePassword(c, u.getUserId(), hash));
         }
-        logService.log(u.getUserId(), "USER_LOGIN", u.getName() + " (" + u.getRole() + ") logged in.");
+        logService.logAction(u.getUserId(), "USER_LOGIN", "User " + u.getUsername() + " (ID: " + u.getUserId() + ") logged in.");
         u.setPassword(null); // never keep the credential in the session object
         return u;
     }
 
     public void logout(User u) {
-        logService.log(u.getUserId(), "USER_LOGOUT", u.getName() + " logged out.");
+        logService.logAction(u.getUserId(), "USER_LOGOUT", "User " + u.getUsername() + " (ID: " + u.getUserId() + ") logged out.");
     }
 
     /** True when no accounts exist yet (first run — next registration becomes Owner). */
@@ -109,9 +109,9 @@ public class AuthService {
         int id = Transaction.execute(c -> {
             int newId = userDAO.insert(c, u);
             if (actor == null) {
-                logService.log(c, newId, "USER_REGISTER", "New account registered: " + un + " (" + role + ", " + status + ").");
+                logService.logAction(c, newId, "USER_REGISTER", "New account registered: " + un + " (" + role + ", " + status + ").");
             } else {
-                logService.log(c, actor.getUserId(), "USER_CREATE", "Created account #" + newId + " " + un + " (" + role + ").");
+                logService.logAction(c, actor.getUserId(), "USER_CREATE", "Created account #" + newId + " " + un + " (" + role + ").");
             }
             return newId;
         });
@@ -146,8 +146,8 @@ public class AuthService {
                 .orElseThrow(() -> new ServiceException("Account #" + userId + " is not in the pending list."));
         Transaction.run(c -> {
             userDAO.approveUser(c, userId);
-            logService.log(c, actor.getUserId(), "USER_APPROVE",
-                    "Approved account #" + userId + " (" + target.getUsername() + ", " + target.getRole() + ").");
+            logService.logAction(c, actor.getUserId(), "USER_APPROVED",
+                    "Admin " + actor.getUserId() + " approved account for User ID " + userId + " (" + target.getUsername() + ", " + target.getRole() + ").");
         });
         target.setStatus(User.STATUS_APPROVED);
         return target;
@@ -168,7 +168,7 @@ public class AuthService {
         }
         Transaction.run(c -> {
             userDAO.updateUserRoleAndStatus(c, userId, target.getRole(), target.getStatus());
-            logService.log(c, actor.getUserId(), "USER_UPDATE",
+            logService.logAction(c, actor.getUserId(), "USER_UPDATED",
                     "Updated account #" + userId + " -> " + target.getRole() + ", " + target.getStatus() + ".");
         });
     }
@@ -185,7 +185,7 @@ public class AuthService {
         target.setRole(role);
         Transaction.run(c -> {
             userDAO.update(c, target);
-            logService.log(c, actor.getUserId(), "USER_UPDATE", "Updated account #" + userId + " -> " + n + " (" + role + ").");
+            logService.logAction(c, actor.getUserId(), "USER_UPDATED", "Updated account #" + userId + " -> " + n + " (" + role + ").");
         });
     }
 
@@ -198,7 +198,7 @@ public class AuthService {
         String status = active ? User.STATUS_ACTIVE : User.STATUS_INACTIVE;
         Transaction.run(c -> {
             userDAO.updateStatus(c, userId, status);
-            logService.log(c, actor.getUserId(), active ? "USER_ACTIVATE" : "USER_DEACTIVATE",
+            logService.logAction(c, actor.getUserId(), "USER_UPDATED",
                     (active ? "Reactivated" : "Deactivated") + " account #" + userId + " (" + target.getUsername() + ").");
         });
     }
@@ -206,9 +206,8 @@ public class AuthService {
     /**
      * Permanent removal. Accounts with recorded sales can never be deleted
      * (financial history must stay intact) — deactivate those instead. The
-     * account's own activity-trail rows are purged in the same transaction so
-     * foreign keys stay satisfied; the deletion itself is logged under the
-     * Owner's id.
+     * user's audit entries cascade on deletion as required by Deliverable 8;
+     * the deletion itself is recorded under the Owner's ID.
      */
     public void deleteUser(User actor, int userId) {
         AccessControl.require(actor, User.ROLE_OWNER);
@@ -223,9 +222,8 @@ public class AuthService {
             throw new ServiceException("Account #" + userId + " has recorded sales and cannot be deleted. Deactivate it instead.");
         }
         Transaction.run(c -> {
-            logService.purgeUser(c, userId);
             userDAO.delete(c, userId);
-            logService.log(c, actor.getUserId(), "USER_DELETE",
+            logService.logAction(c, actor.getUserId(), "USER_DELETE",
                     "Deleted account #" + userId + " (" + target.getUsername() + ", " + target.getRole() + ").");
         });
     }
@@ -237,7 +235,7 @@ public class AuthService {
         String hash = PasswordUtil.hash(newPassword);
         Transaction.run(c -> {
             userDAO.updatePassword(c, userId, hash);
-            logService.log(c, actor.getUserId(), "USER_PASSWORD_RESET", "Reset password for account #" + userId + ".");
+            logService.logAction(c, actor.getUserId(), "USER_PASSWORD_RESET", "Reset password for account #" + userId + ".");
         });
     }
 

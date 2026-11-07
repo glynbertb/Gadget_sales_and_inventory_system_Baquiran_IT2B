@@ -165,12 +165,32 @@ public class CashierMenu {
         for (int i = 0; i < Sale.PAYMENT_METHODS.length; i++)
             System.out.println("    [" + ConsoleStyle.color(String.valueOf(i+1), ConsoleStyle.CYAN) + "] " + Sale.PAYMENT_METHODS[i]);
         String method = Sale.PAYMENT_METHODS[InputUtil.readInt("  Select: ", 1, Sale.PAYMENT_METHODS.length) - 1];
-        if (!InputUtil.confirm("Confirm and complete this sale?")) return false;
-
         List<CartItem> lines = new ArrayList<>();
         cart.forEach((id, qty) -> lines.add(new CartItem(id, qty)));
+        double total = 0;
+        for (CartItem line : lines) {
+            total += FormatUtil.round2(products.getProduct(line.gadgetId()).getPrice() * line.quantity());
+        }
+        total = FormatUtil.round2(total);
+        System.out.println("\n  Total due: " + FormatUtil.money(total));
+        Double cashReceived = null;
+        if ("Cash".equals(method)) {
+            while (true) {
+                double received = InputUtil.readPositiveDouble("Cash received (₱): ");
+                if (received < total) {
+                    System.out.println(ConsoleStyle.color("  Insufficient cash. Please enter at least "
+                            + FormatUtil.money(total) + ".", ConsoleStyle.YELLOW));
+                    continue;
+                }
+                cashReceived = received;
+                System.out.println("  Change:    " + FormatUtil.money(FormatUtil.round2(received - total)));
+                break;
+            }
+        }
+        if (!InputUtil.confirm("Confirm and complete this sale?")) return false;
+
         try {
-            Sale sale = sales.checkout(user, lines, method);
+            Sale sale = sales.checkout(user, lines, method, cashReceived);
             ViewHelper.printReceipt(sale);
             InputUtil.pause();
             return true;

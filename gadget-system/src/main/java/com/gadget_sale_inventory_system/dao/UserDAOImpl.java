@@ -10,11 +10,11 @@ import java.util.Optional;
 
 public class UserDAOImpl implements UserDAO {
 
-    private static final String SELECT = "SELECT user_id, name, username, password, role, status FROM users";
+    private static final String SELECT = "SELECT id, name, username, password, role, status FROM users";
 
     private static User map(ResultSet rs) throws SQLException {
         User u = new User();
-        u.setUserId(rs.getInt("user_id"));
+        u.setUserId(rs.getInt("id"));
         u.setName(rs.getString("name"));
         u.setUsername(rs.getString("username"));
         u.setPassword(rs.getString("password"));
@@ -24,7 +24,7 @@ public class UserDAOImpl implements UserDAO {
     }
 
     @Override public Optional<User> findById(int userId) {
-        return JdbcHelper.queryOne(SELECT + " WHERE user_id = ?", ps -> ps.setInt(1, userId), UserDAOImpl::map);
+        return JdbcHelper.queryOne(SELECT + " WHERE id = ?", ps -> ps.setInt(1, userId), UserDAOImpl::map);
     }
 
     @Override public Optional<User> findByUsername(String username) {
@@ -32,7 +32,7 @@ public class UserDAOImpl implements UserDAO {
     }
 
     @Override public List<User> findAll() {
-        return JdbcHelper.query(SELECT + " ORDER BY user_id", null, UserDAOImpl::map);
+        return JdbcHelper.query(SELECT + " ORDER BY id", null, UserDAOImpl::map);
     }
 
     @Override public int insert(Connection c, User u) {
@@ -46,7 +46,7 @@ public class UserDAOImpl implements UserDAO {
     }
 
     @Override public void update(Connection c, User u) {
-        JdbcHelper.update(c, "UPDATE users SET name = ?, role = ? WHERE user_id = ?", ps -> {
+        JdbcHelper.update(c, "UPDATE users SET name = ?, role = ? WHERE id = ?", ps -> {
             ps.setString(1, u.getName());
             ps.setString(2, u.getRole());
             ps.setInt(3, u.getUserId());
@@ -54,7 +54,7 @@ public class UserDAOImpl implements UserDAO {
     }
 
     @Override public void updateUserRoleAndStatus(Connection c, int userId, String newRole, String newStatus) {
-        int changed = JdbcHelper.update(c, "UPDATE users SET role = ?, status = ? WHERE user_id = ?", ps -> {
+        int changed = JdbcHelper.update(c, "UPDATE users SET role = ?, status = ? WHERE id = ?", ps -> {
             ps.setString(1, newRole.trim().toUpperCase(Locale.ROOT));
             ps.setString(2, newStatus.trim().toUpperCase(Locale.ROOT));
             ps.setInt(3, userId);
@@ -63,11 +63,11 @@ public class UserDAOImpl implements UserDAO {
     }
 
     @Override public void updateStatus(Connection c, int userId, String status) {
-        JdbcHelper.update(c, "UPDATE users SET status = ? WHERE user_id = ?", ps -> { ps.setString(1, status); ps.setInt(2, userId); });
+        JdbcHelper.update(c, "UPDATE users SET status = ? WHERE id = ?", ps -> { ps.setString(1, status); ps.setInt(2, userId); });
     }
 
     @Override public void updatePassword(Connection c, int userId, String hash) {
-        JdbcHelper.update(c, "UPDATE users SET password = ? WHERE user_id = ?", ps -> { ps.setString(1, hash); ps.setInt(2, userId); });
+        JdbcHelper.update(c, "UPDATE users SET password = ? WHERE id = ?", ps -> { ps.setString(1, hash); ps.setInt(2, userId); });
     }
 
     @Override public boolean hasSales(int userId) {
@@ -76,7 +76,7 @@ public class UserDAOImpl implements UserDAO {
     }
 
     @Override public void delete(Connection c, int userId) {
-        JdbcHelper.update(c, "DELETE FROM users WHERE user_id = ?", ps -> ps.setInt(1, userId));
+        JdbcHelper.update(c, "DELETE FROM users WHERE id = ?", ps -> ps.setInt(1, userId));
     }
 
     @Override public List<User> getAllUsers() {
@@ -84,11 +84,11 @@ public class UserDAOImpl implements UserDAO {
     }
 
     @Override public List<User> getPendingUsers() {
-        return JdbcHelper.query(SELECT + " WHERE UPPER(status) = 'PENDING' ORDER BY user_id", null, UserDAOImpl::map);
+        return JdbcHelper.query(SELECT + " WHERE UPPER(status) = 'PENDING' ORDER BY id", null, UserDAOImpl::map);
     }
 
     @Override public void approveUser(Connection c, int userId) {
-        JdbcHelper.update(c, "UPDATE users SET status = ? WHERE user_id = ?",
+        JdbcHelper.update(c, "UPDATE users SET status = ? WHERE id = ?",
                 ps -> { ps.setString(1, User.STATUS_APPROVED); ps.setInt(2, userId); });
     }
 }

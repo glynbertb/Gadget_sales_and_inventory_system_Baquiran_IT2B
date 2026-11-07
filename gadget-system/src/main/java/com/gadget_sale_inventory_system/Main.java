@@ -1,7 +1,6 @@
 package com.gadget_sale_inventory_system;
 
-import com.gadget_sale_inventory_system.dao.ActivityLogDAO;
-import com.gadget_sale_inventory_system.dao.ActivityLogDAOImpl;
+import com.gadget_sale_inventory_system.dao.ActivityLogDao;
 import com.gadget_sale_inventory_system.dao.CategoryDAO;
 import com.gadget_sale_inventory_system.dao.CategoryDAOImpl;
 import com.gadget_sale_inventory_system.dao.DatabaseConnection;
@@ -52,7 +51,7 @@ public final class Main {
             CategoryDAO categoryDAO = new CategoryDAOImpl();
             ProductDAO productDAO = new ProductDAOImpl();
             SaleDAO saleDAO = new SaleDAOImpl();
-            ActivityLogDAO logDAO = new ActivityLogDAOImpl();
+            ActivityLogDao logDAO = new ActivityLogDao();
 
             ActivityLogService logService = new ActivityLogService(logDAO);
             AuthService authService = new AuthService(userDAO, logService);

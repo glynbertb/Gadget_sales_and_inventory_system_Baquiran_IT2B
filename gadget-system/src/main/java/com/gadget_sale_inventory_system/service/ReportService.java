@@ -53,7 +53,7 @@ public class ReportService {
         String today = java.time.LocalDate.now().toString(); // matches "yyyy-MM-dd HH:mm:ss" prefix
         double expected = FormatUtil.round2(saleDAO.totalCashOnDate(today));
         double variance = FormatUtil.round2(countedCash - expected);
-        logService.log(actor.getUserId(), "REGISTER_AUDIT", "Register audit for " + today + ": expected "
+        logService.logAction(actor.getUserId(), "REGISTER_AUDIT", "Register audit for " + today + ": expected "
                 + FormatUtil.money(expected) + ", counted " + FormatUtil.money(countedCash)
                 + ", variance " + FormatUtil.money(variance) + ".");
         return new RegisterAudit(today, expected, countedCash, variance);
@@ -65,7 +65,7 @@ public class ReportService {
         SummaryReport report = buildSummary(actor);
         try {
             Path out = CSVExporter.exportSummary(report, Path.of(fileName)).toAbsolutePath();
-            logService.log(actor.getUserId(), "REPORT_EXPORT", "Exported summary report to " + out.getFileName() + ".");
+            logService.logAction(actor.getUserId(), "REPORT_EXPORT", "Exported summary report to " + out.getFileName() + ".");
             return out;
         } catch (IOException e) {
             throw new ServiceException("Could not write CSV file: " + e.getMessage());

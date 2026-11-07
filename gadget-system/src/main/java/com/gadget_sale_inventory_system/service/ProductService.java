@@ -36,7 +36,7 @@ public class ProductService {
         Category cat = new Category(0, n, blankToNull(description));
         int id = Transaction.execute(c -> {
             int newId = categoryDAO.insert(c, cat);
-            logService.log(c, actor.getUserId(), "CATEGORY_ADD", "Added category #" + newId + " '" + n + "'.");
+            logService.logAction(c, actor.getUserId(), "CATEGORY_ADD", "Added category #" + newId + " '" + n + "'.");
             return newId;
         });
         cat.setCategoryId(id);
@@ -54,7 +54,7 @@ public class ProductService {
         cat.setDescription(blankToNull(description));
         Transaction.run(c -> {
             categoryDAO.update(c, cat);
-            logService.log(c, actor.getUserId(), "CATEGORY_UPDATE", "Updated category #" + id + " -> '" + n + "'.");
+            logService.logAction(c, actor.getUserId(), "CATEGORY_UPDATE", "Updated category #" + id + " -> '" + n + "'.");
         });
     }
 
@@ -65,7 +65,7 @@ public class ProductService {
         if (categoryDAO.isInUse(id)) throw new ServiceException("Category is in use by existing gadgets and cannot be removed.");
         Transaction.run(c -> {
             categoryDAO.delete(c, id);
-            logService.log(c, actor.getUserId(), "CATEGORY_DELETE", "Removed category #" + id + " '" + cat.getCategoryName() + "'.");
+            logService.logAction(c, actor.getUserId(), "CATEGORY_DELETE", "Removed category #" + id + " '" + cat.getCategoryName() + "'.");
         });
     }
 
@@ -100,7 +100,7 @@ public class ProductService {
         p.setStatus(quantity > 0 ? Product.STATUS_AVAILABLE : Product.STATUS_OUT_OF_STOCK);
         int id = Transaction.execute(c -> {
             int newId = productDAO.insert(c, p);
-            logService.log(c, actor.getUserId(), "PRODUCT_ADD",
+            logService.logAction(c, actor.getUserId(), "PRODUCT_ADD",
                     "Added gadget #" + newId + " '" + n + "' (qty " + quantity + ", price " + FormatUtil.money(p.getPrice()) + ").");
             return newId;
         });
@@ -120,7 +120,7 @@ public class ProductService {
         p.setPrice(FormatUtil.round2(price));
         Transaction.run(c -> {
             productDAO.updateInfo(c, p);
-            logService.log(c, actor.getUserId(), "PRODUCT_UPDATE", "Updated gadget #" + id + " '" + n + "' (price "
+            logService.logAction(c, actor.getUserId(), "PRODUCT_UPDATE", "Updated gadget #" + id + " '" + n + "' (price "
                     + FormatUtil.money(oldPrice) + " -> " + FormatUtil.money(p.getPrice()) + ").");
         });
     }
@@ -137,7 +137,7 @@ public class ProductService {
         }
         Transaction.run(c -> {
             productDAO.increaseStock(c, id, quantityToAdd);
-            logService.log(c, actor.getUserId(), "STOCK_RECEIVE",
+            logService.logAction(c, actor.getUserId(), "STOCK_RECEIVE",
                     "Received " + quantityToAdd + " unit(s) of #" + id + " '" + p.getGadgetName() + "' (was " + p.getStockQuantity() + ").");
         });
     }
@@ -163,7 +163,7 @@ public class ProductService {
             if (p.getStockQuantity() != 0 || !newStatus.equals(p.getStatus())) {
                 Transaction.run(c -> {
                     productDAO.updateStock(c, id, 0, newStatus);
-                    logService.log(c, actor.getUserId(), "PRODUCT_STATUS",
+                    logService.logAction(c, actor.getUserId(), "PRODUCT_STATUS",
                             "Gadget #" + id + " '" + p.getGadgetName() + "' status " + p.getStatus() + " -> " + newStatus + " (stock zeroed).");
                 });
                 return;
@@ -171,7 +171,7 @@ public class ProductService {
         }
         Transaction.run(c -> {
             productDAO.updateStatus(c, id, newStatus);
-            logService.log(c, actor.getUserId(), "PRODUCT_STATUS",
+            logService.logAction(c, actor.getUserId(), "PRODUCT_STATUS",
                     "Gadget #" + id + " '" + p.getGadgetName() + "' status " + p.getStatus() + " -> " + newStatus + ".");
         });
     }
@@ -191,7 +191,7 @@ public class ProductService {
         if (adjustSystemStock && variance != 0) {
             applyStock(actor, p, countedQuantity, "STOCK_AUDIT", desc);
         } else {
-            logService.log(actor.getUserId(), "STOCK_AUDIT", desc);
+            logService.logAction(actor.getUserId(), "STOCK_AUDIT", desc);
         }
         return variance;
     }
@@ -211,7 +211,7 @@ public class ProductService {
         String finalStatus = status;
         Transaction.run(c -> {
             productDAO.updateStock(c, p.getGadgetId(), newQuantity, finalStatus);
-            logService.log(c, actor.getUserId(), action, description);
+            logService.logAction(c, actor.getUserId(), action, description);
         });
     }
 
